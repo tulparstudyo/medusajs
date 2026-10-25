@@ -12,6 +12,9 @@ coverage
 !src/**
 /src/api
 
+# Licensed carriers compiled by the Kibisis installer
+/.kibisis
+
 ./tsconfig.tsbuildinfo
 medusa-db.sql
 build
