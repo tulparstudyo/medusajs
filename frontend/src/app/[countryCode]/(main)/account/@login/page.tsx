@@ -1,6 +1,8 @@
 import { Metadata } from "next"
 
-import LoginTemplate from "@modules/account/templates/login-template"
+import { theme } from "@theme"
+
+const LoginTemplate = theme.account.login
 
 export const metadata: Metadata = {
   title: "Sign in",

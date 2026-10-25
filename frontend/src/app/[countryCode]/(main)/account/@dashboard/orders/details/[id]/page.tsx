@@ -1,7 +1,9 @@
 import { retrieveOrder } from "@lib/data/orders"
-import OrderDetailsTemplate from "@modules/order/templates/order-details-template"
+import { theme } from "@theme"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+
+const OrderDetailsTemplate = theme.order.details
 
 type Props = {
   params: Promise<{ id: string }>

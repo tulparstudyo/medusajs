@@ -26,6 +26,12 @@
       "@modules/*": [
         "modules/*"
       ],
+      "@theme": [
+        "theme/index.ts"
+      ],
+      "@theme/*": [
+        "theme/*"
+      ],
       "@pages/*": [
         "pages/*"
       ]

@@ -2,8 +2,13 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
-import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
+import { theme } from "@theme"
+
+const ProductTemplate = theme.products
+
+const PRODUCT_FIELDS =
+  "*variants.calculated_price,+variants.inventory_quantity,*variants.images,*variants.options,+metadata,+tags,*categories,*categories.parent_category,*collection,*images,*options,*options.values,+description,+material,*type,+weight,+length,+width,+height,+origin_country"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
@@ -38,7 +43,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const product = await listProducts({
     countryCode: params.countryCode,
-    queryParams: { handle },
+    queryParams: { handle, fields: PRODUCT_FIELDS },
   }).then(({ response }) => response.products[0])
 
   if (!product) {
@@ -47,10 +52,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   return {
     title: `${product.title} | Medusa Store`,
-    description: `${product.title}`,
+    description: product.description || product.title,
     openGraph: {
       title: `${product.title} | Medusa Store`,
-      description: `${product.title}`,
+      description: product.description || product.title,
       images: product.thumbnail ? [product.thumbnail] : [],
     },
   }
@@ -69,7 +74,7 @@ export default async function ProductPage(props: Props) {
 
   const pricedProduct = await listProducts({
     countryCode: params.countryCode,
-    queryParams: { handle: params.handle },
+    queryParams: { handle: params.handle, fields: PRODUCT_FIELDS },
   }).then(({ response }) => response.products[0])
 
   if (!pricedProduct) {

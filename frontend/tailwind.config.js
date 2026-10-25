@@ -8,6 +8,7 @@ module.exports = {
     "./src/pages/**/*.{js,ts,jsx,tsx}",
     "./src/components/**/*.{js,ts,jsx,tsx}",
     "./src/modules/**/*.{js,ts,jsx,tsx}",
+    "./src/theme/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -58,6 +59,7 @@ module.exports = {
         "3xl": "2rem",
       },
       fontFamily: {
+        jakarta: ['"Plus Jakarta Sans"', "sans-serif"],
         sans: [
           "Inter",
           "-apple-system",

@@ -1,0 +1,31 @@
+<section
+  id="{{dom_id}}"
+  class="kibi-banner kibi-banner--{{layout}}"
+  data-kibi-section="promo-banner"
+  data-kibi-id="{{instance_id}}"
+  style="--banner-columns: {{columns}}; --banner-visible: {{visible}};"
+>
+  {{controls}}
+  <div class="kibi-banner__track" data-banner-track>
+    {{items}}
+  </div>
+</section>
+
+<template data-part="controls">
+  <div class="kibi-banner__controls">
+    <button type="button" class="kibi-banner__nav" data-banner-prev aria-label="Önceki">{{prev}}</button>
+    <button type="button" class="kibi-banner__nav" data-banner-next aria-label="Sonraki">{{next}}</button>
+  </div>
+</template>
+
+<template data-part="item">
+  <a class="kibi-banner__item kibi-banner__item--{{tone}}" href="{{href}}">
+    <div class="kibi-banner__body">
+      <span class="kibi-banner__eyebrow">{{eyebrow}}</span>
+      <h3 class="kibi-banner__title">{{title}}</h3>
+      <p class="kibi-banner__text">{{text}}</p>
+    </div>
+    <span class="kibi-banner__action">{{action}}</span>
+    <span class="kibi-banner__glow"></span>
+  </a>
+</template>

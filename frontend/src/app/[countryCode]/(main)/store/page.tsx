@@ -2,7 +2,9 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { getRegion } from "@lib/data/regions"
-import StoreTemplate from "@modules/store/templates"
+import { theme } from "@theme"
+
+const StoreTemplate = theme.store
 
 export const metadata: Metadata = {
   title: "Store",

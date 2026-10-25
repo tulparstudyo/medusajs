@@ -1,8 +1,10 @@
 import { retrieveCart } from "@lib/data/cart"
 import { retrieveCustomer } from "@lib/data/customer"
-import CartTemplate from "@modules/cart/templates"
+import { theme } from "@theme"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+
+const CartTemplate = theme.cart
 
 export const metadata: Metadata = {
   title: "Cart",

@@ -1,0 +1,17 @@
+<section
+  class="kibi-qc"
+  data-kibi-section="quick-categories"
+  data-kibi-id="{{instance_id}}"
+>
+  <div class="kibi-qc__track" data-qc-track>
+    {{#items}}
+    <a class="kibi-qc__item" href="{{href}}">
+      <span class="kibi-qc__circle kibi-qc__circle--{{tone}}">
+        <span class="kibi-qc__icon">{{icon}}</span>
+        <span class="kibi-qc__title">{{title}}</span>
+      </span>
+      <span class="kibi-qc__label kibi-qc__label--{{tone}}">{{label}}</span>
+    </a>
+    {{/items}}
+  </div>
+</section>

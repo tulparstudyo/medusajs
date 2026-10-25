@@ -1,0 +1,204 @@
+.kibi-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .kibi-hero {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+
+.kibi-hero__stage {
+  position: relative;
+  min-height: 300px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1e1b4b;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+@media (min-width: 640px) {
+  .kibi-hero__stage {
+    min-height: 380px;
+  }
+}
+
+.kibi-hero__slide {
+  position: absolute;
+  inset: 0;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+.kibi-hero__slide.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.kibi-hero__slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.kibi-hero__dots {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.kibi-hero__dots:empty {
+  display: none;
+}
+
+.kibi-hero__dot {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgb(255 255 255 / 0.45);
+  cursor: pointer;
+}
+
+.kibi-hero__dot.is-active {
+  background: #fff;
+}
+
+.kibi-hero__side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .kibi-hero__side {
+    flex-direction: row;
+  }
+}
+
+.kibi-hero__card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 148px;
+  border-radius: 16px;
+  padding: 20px;
+  text-decoration: none;
+}
+
+.kibi-hero__card--accent {
+  color: #fff;
+  background: linear-gradient(to bottom right, #f59e0b, #ea580c);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.kibi-hero__card--plain {
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  transition: border-color 0.2s ease;
+}
+
+.kibi-hero__card--plain:hover {
+  border-color: #fdba74;
+}
+
+.kibi-hero__eyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kibi-hero__eyebrow:empty,
+.kibi-hero__title:empty,
+.kibi-hero__text:empty,
+.kibi-hero__action:empty,
+.kibi-hero__icon:empty {
+  display: none;
+}
+
+.kibi-hero__card--accent .kibi-hero__eyebrow,
+.kibi-hero__card--accent .kibi-hero__text {
+  color: #fef3c7;
+}
+
+.kibi-hero__card--plain .kibi-hero__eyebrow {
+  color: #94a3b8;
+}
+
+.kibi-hero__title {
+  margin: 4px 0 0;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.kibi-hero__card--accent .kibi-hero__title {
+  font-size: 20px;
+}
+
+.kibi-hero__card--plain .kibi-hero__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.kibi-hero__text {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.kibi-hero__card--plain .kibi-hero__text {
+  color: #64748b;
+}
+
+.kibi-hero__card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.kibi-hero__card-foot--rule {
+  margin-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.kibi-hero__action {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kibi-hero__card--accent .kibi-hero__action {
+  text-decoration: underline;
+}
+
+.kibi-hero__card--plain .kibi-hero__action {
+  color: #ea580c;
+}
+
+.kibi-hero__icon {
+  display: flex;
+}
+
+.kibi-hero__icon .kibi-icon {
+  width: 28px;
+  height: 28px;
+}

@@ -1,0 +1,217 @@
+.kibi-banner--grid .kibi-banner__track,
+.kibi-banner--list .kibi-banner__track {
+  display: grid;
+  gap: 16px;
+}
+
+.kibi-banner--grid .kibi-banner__track {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .kibi-banner--grid .kibi-banner__track {
+    grid-template-columns: repeat(var(--banner-columns), minmax(0, 1fr));
+  }
+}
+
+.kibi-banner--list .kibi-banner__track {
+  grid-template-columns: 1fr;
+}
+
+.kibi-banner--slider .kibi-banner__controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.kibi-banner__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.kibi-banner__nav .kibi-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.kibi-banner__nav:hover {
+  background: #f8fafc;
+}
+
+.kibi-banner--slider .kibi-banner__track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.kibi-banner--slider .kibi-banner__track::-webkit-scrollbar {
+  display: none;
+}
+
+.kibi-banner--slider .kibi-banner__item {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+}
+
+@media (min-width: 768px) {
+  .kibi-banner--slider .kibi-banner__item {
+    flex-basis: calc(
+      (100% - (min(2, var(--banner-visible)) - 1) * 16px) / min(2, var(--banner-visible))
+    );
+  }
+}
+
+@media (min-width: 1024px) {
+  .kibi-banner--slider .kibi-banner__item {
+    flex-basis: calc((100% - (var(--banner-visible) - 1) * 16px) / var(--banner-visible));
+  }
+}
+
+.kibi-banner__item {
+  position: relative;
+  display: flex;
+  min-height: 160px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 24px;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.kibi-banner__body,
+.kibi-banner__action {
+  position: relative;
+  z-index: 1;
+}
+
+.kibi-banner__eyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kibi-banner__eyebrow:empty,
+.kibi-banner__text:empty,
+.kibi-banner__action:empty {
+  display: none;
+}
+
+.kibi-banner__title {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.kibi-banner__text {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.kibi-banner__action {
+  padding-top: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  transition: transform 0.15s ease;
+}
+
+.kibi-banner__item:hover .kibi-banner__action {
+  transform: translateX(4px);
+}
+
+.kibi-banner__glow {
+  position: absolute;
+  right: -24px;
+  bottom: -24px;
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  pointer-events: none;
+}
+
+.kibi-banner__item--stone {
+  background: linear-gradient(to right, #1c1917, #292524);
+  color: #fff;
+}
+
+.kibi-banner__item--stone .kibi-banner__eyebrow,
+.kibi-banner__item--stone .kibi-banner__action {
+  color: #fbbf24;
+}
+
+.kibi-banner__item--stone .kibi-banner__text {
+  color: #d6d3d1;
+}
+
+.kibi-banner__item--amber {
+  background: linear-gradient(to right, #fbbf24, #f97316);
+  color: #020617;
+}
+
+.kibi-banner__item--amber .kibi-banner__eyebrow,
+.kibi-banner__item--amber .kibi-banner__action {
+  color: #020617;
+}
+
+.kibi-banner__item--amber .kibi-banner__text {
+  color: #1e293b;
+}
+
+.kibi-banner__item--indigo {
+  background: linear-gradient(to right, #1e3a8a, #312e81, #0f172a);
+  color: #fff;
+}
+
+.kibi-banner__item--indigo .kibi-banner__eyebrow,
+.kibi-banner__item--indigo .kibi-banner__action {
+  color: #67e8f9;
+}
+
+.kibi-banner__item--indigo .kibi-banner__text {
+  color: #cbd5e1;
+}
+
+.kibi-banner__item--purple {
+  background: linear-gradient(to bottom right, #581c87, #0f172a);
+  color: #fff;
+}
+
+.kibi-banner__item--purple .kibi-banner__eyebrow,
+.kibi-banner__item--purple .kibi-banner__action {
+  color: #d8b4fe;
+}
+
+.kibi-banner__item--purple .kibi-banner__text {
+  color: #cbd5e1;
+}
+
+.kibi-banner__item--rose {
+  background: linear-gradient(to bottom right, #881337, #431407);
+  color: #fff;
+}
+
+.kibi-banner__item--rose .kibi-banner__eyebrow,
+.kibi-banner__item--rose .kibi-banner__action {
+  color: #fdba74;
+}
+
+.kibi-banner__item--rose .kibi-banner__text {
+  color: #cbd5e1;
+}

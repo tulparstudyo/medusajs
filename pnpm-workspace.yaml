@@ -1,5 +1,6 @@
 packages:
   - "backend"
+  - "cdn"
   - "frontend"
   - "!backend/.medusa/**"
 

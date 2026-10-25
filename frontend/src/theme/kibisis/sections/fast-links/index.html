@@ -1,0 +1,20 @@
+<section
+  id="{{dom_id}}"
+  class="kibi-links kibi-links--{{variant}}"
+  data-kibi-section="fast-links"
+  data-kibi-id="{{instance_id}}"
+>
+  {{head}}
+  <div class="kibi-links__list">{{items}}</div>
+</section>
+
+<template data-part="head">
+  <div class="kibi-links__head">
+    <span class="kibi-links__bar"></span>
+    <h2 class="kibi-links__title">{{title}}</h2>
+  </div>
+</template>
+
+<template data-part="item">
+  <a class="kibi-links__item {{accent}}" href="{{href}}">{{icon}}{{label}}{{mark}}</a>
+</template>

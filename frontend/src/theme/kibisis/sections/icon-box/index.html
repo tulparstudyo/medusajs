@@ -1,0 +1,18 @@
+<section
+  id="{{dom_id}}"
+  class="kibi-box"
+  data-kibi-section="icon-box"
+  data-kibi-id="{{instance_id}}"
+>
+  {{items}}
+</section>
+
+<template data-part="item">
+  <article class="kibi-box__item">
+    <div class="kibi-box__icon kibi-box__icon--{{tone}}">{{icon}}</div>
+    <div>
+      <h4 class="kibi-box__title">{{title}}</h4>
+      {{text}}
+    </div>
+  </article>
+</template>

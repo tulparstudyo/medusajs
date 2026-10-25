@@ -19,11 +19,13 @@ export const listProducts = async ({
   queryParams,
   countryCode,
   regionId,
+  cache = "force-cache",
 }: {
   pageParam?: number
   queryParams?: ProductListQueryParams
   countryCode?: string
   regionId?: string
+  cache?: "force-cache" | "no-store"
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
@@ -56,8 +58,9 @@ export const listProducts = async ({
     ...(await getAuthHeaders()),
   }
 
+  const cached = await getCacheOptions("products")
   const next = {
-    ...(await getCacheOptions("products")),
+    tags: ["products", ...("tags" in cached ? cached.tags : [])],
   }
 
   return sdk.client
@@ -75,7 +78,7 @@ export const listProducts = async ({
         },
         headers,
         next,
-        cache: "force-cache",
+        cache,
       }
     )
     .then(({ products, count }) => {
@@ -93,8 +96,8 @@ export const listProducts = async ({
 }
 
 /**
- * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
- * It will then return the paginated products based on the page and limit parameters.
+ * Loads up to 100 products without the storefront fetch cache, sorts them,
+ * then returns the requested page.
  */
 export const listProductsWithSort = async ({
   page = 0,
@@ -128,6 +131,7 @@ export const listProductsWithSort = async ({
       limit: 100,
     },
     countryCode,
+    cache: "no-store",
   })
 
   const sortedProducts = sortProducts(products, sortBy)

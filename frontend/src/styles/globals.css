@@ -2,6 +2,19 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+@layer base {
+  /*
+   * Medusa UI preset sets every border to var(--border-base). The kibisis theme
+   * was designed against Tailwind's default border color, so restore it there.
+   */
+  .kibisis,
+  .kibisis *,
+  .kibisis ::before,
+  .kibisis ::after {
+    border-color: #e5e7eb;
+  }
+}
+
 @layer utilities {
   /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {

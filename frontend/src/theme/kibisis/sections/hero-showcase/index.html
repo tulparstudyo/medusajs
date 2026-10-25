@@ -1,0 +1,49 @@
+<section class="kibi-hero" data-kibi-section="hero-showcase" data-kibi-id="{{instance_id}}">
+  {{stage}}
+  {{side}}
+</section>
+
+<template data-part="stage">
+  <div class="kibi-hero__stage" data-hero-stage>
+    {{slides}}
+    <div class="kibi-hero__dots" data-hero-dots></div>
+  </div>
+</template>
+
+<template data-part="slide">
+  <a class="kibi-hero__slide {{active}}" href="{{href}}" data-hero-slide>
+    <img src="{{image}}" alt="">
+  </a>
+</template>
+
+<template data-part="side">
+  <div class="kibi-hero__side">{{cards}}</div>
+</template>
+
+<template data-part="card-accent">
+  <a class="kibi-hero__card kibi-hero__card--accent" href="{{href}}">
+    <div class="kibi-hero__card-body">
+      <span class="kibi-hero__eyebrow">{{eyebrow}}</span>
+      <h3 class="kibi-hero__title">{{title}}</h3>
+      <p class="kibi-hero__text">{{text}}</p>
+    </div>
+    <div class="kibi-hero__card-foot">
+      <span class="kibi-hero__action">{{action}}</span>
+      <span class="kibi-hero__icon">{{icon}}</span>
+    </div>
+  </a>
+</template>
+
+<template data-part="card-plain">
+  <a class="kibi-hero__card kibi-hero__card--plain" href="{{href}}">
+    <div class="kibi-hero__card-body">
+      <span class="kibi-hero__eyebrow">{{eyebrow}}</span>
+      <h3 class="kibi-hero__title">{{title}}</h3>
+      <p class="kibi-hero__text">{{text}}</p>
+    </div>
+    <div class="kibi-hero__card-foot kibi-hero__card-foot--rule">
+      <span class="kibi-hero__action">{{action}}</span>
+      <span class="kibi-hero__icon">{{icon}}</span>
+    </div>
+  </a>
+</template>

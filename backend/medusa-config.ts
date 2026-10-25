@@ -1,6 +1,20 @@
+import path from "path"
 import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
+
+// `medusa start` loads the compiled copy from .medusa/server, so resolve paths
+// from the backend folder in both cases.
+const BACKEND_DIR =
+  path.basename(path.dirname(__dirname)) === ".medusa"
+    ? path.resolve(__dirname, "../..")
+    : __dirname
+
+const CDN_PORT = process.env.CDN_PORT || "9080"
+const CDN_URL = process.env.CDN_URL || `http://localhost:${CDN_PORT}`
+const CDN_DIR = process.env.CDN_DIR || path.resolve(BACKEND_DIR, "../cdn/files")
+const PRIVATE_UPLOAD_DIR =
+  process.env.PRIVATE_UPLOAD_DIR || path.resolve(BACKEND_DIR, "uploads")
 
 module.exports = defineConfig({
   projectConfig: {
@@ -16,5 +30,38 @@ module.exports = defineConfig({
       secure: false,
       sameSite: "lax",
     },
-  }
+  },
+  modules: [
+    {
+      resolve: "@medusajs/medusa/file",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/file-local",
+            id: "local",
+            options: {
+              upload_dir: CDN_DIR,
+              private_upload_dir: PRIVATE_UPLOAD_DIR,
+              backend_url: CDN_URL,
+            },
+          },
+        ],
+      },
+    },
+    {
+      resolve: "./src/kibisis/kibinav",
+    },
+    {
+      resolve: "./src/kibisis/kibipage",
+    },
+    {
+      resolve: "./src/kibisis/kibiimport",
+    },
+    {
+      resolve: "./src/kibisis/kibigroup",
+    },
+    {
+      resolve: "./src/kibisis/kibisettings",
+    },
+  ],
 })

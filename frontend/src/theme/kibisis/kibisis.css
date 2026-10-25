@@ -1,0 +1,56 @@
+/*
+ * Kibisis theme styles (ported from vipnova-eticaret-paketi/style.css).
+ *
+ * Not ported on purpose:
+ * - body font / background: applied by layout/shell (.kibisis wrapper).
+ * - .product-card transition: the original design overrides it with the
+ *   Tailwind `transition-all` utility, so only the hover transform remains.
+ */
+
+/*
+ * Plus Jakarta Sans, self-hosted (variable weight axis, same files Google Fonts
+ * serves). next/font is not used because it always appends a metric-adjusted
+ * fallback face, which changes the width of glyphs missing from the font
+ * (arrows) compared with the original design.
+ */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("./fonts/plus-jakarta-sans-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("./fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+.kibisis .product-card:hover {
+  transform: translateY(-2px);
+}
+
+.kibisis .price-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.kibisis .kibi-product-slot .kibi-box,
+.kibisis .kibi-product-slot .kibi-banner--grid .kibi-banner__track,
+.kibisis .kibi-product-slot .kibi-banner--list .kibi-banner__track {
+  grid-template-columns: 1fr;
+}
+
+.kibisis .kibi-product-slot .kibi-box {
+  padding: 0;
+  gap: 12px;
+}

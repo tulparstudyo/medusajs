@@ -1,0 +1,10 @@
+{
+  "name": "@dtc/cdn",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Static file server for uploaded media.",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}

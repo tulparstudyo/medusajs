@@ -1,7 +1,9 @@
 import { retrieveOrder } from "@lib/data/orders"
-import OrderCompletedTemplate from "@modules/order/templates/order-completed-template"
+import { theme } from "@theme"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+
+const OrderCompletedTemplate = theme.order.completed
 
 type Props = {
   params: Promise<{ id: string }>

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react"
 import Input from "@modules/common/components/input"
-import { LOGIN_VIEW } from "@modules/account/templates/login-template"
+import { LOGIN_VIEW } from "@theme/default/account/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"

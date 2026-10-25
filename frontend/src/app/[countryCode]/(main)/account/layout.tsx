@@ -1,6 +1,8 @@
 import { retrieveCustomer } from "@lib/data/customer"
 // TODO: Re-add Toaster component when needed
-import AccountLayout from "@modules/account/templates/account-layout"
+import { theme } from "@theme"
+
+const AccountLayout = theme.account.layout
 
 export default async function AccountPageLayout({
   dashboard,

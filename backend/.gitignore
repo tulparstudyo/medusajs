@@ -11,6 +11,7 @@ coverage
 
 !src/**
 /src/api
+/src/kibisis/kibicarrier/carriers/
 
 # Licensed carriers compiled by the Kibisis installer
 /.kibisis

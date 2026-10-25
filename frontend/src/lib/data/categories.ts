@@ -2,6 +2,17 @@ import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
 import { getCacheOptions } from "./cookies"
 
+export function categoryTreeIds(
+  category: HttpTypes.StoreProductCategory
+): string[] {
+  const ids = [category.id]
+  for (const child of category.category_children ?? []) {
+    ids.push(...categoryTreeIds(child))
+  }
+
+  return Array.from(new Set(ids.filter(Boolean)))
+}
+
 export const listCategories = async (query?: Record<string, unknown>) => {
   const next = {
     ...(await getCacheOptions("categories")),
@@ -27,7 +38,15 @@ export const listCategories = async (query?: Record<string, unknown>) => {
 }
 
 export const getCategoryByHandle = async (categoryHandle: string[]) => {
-  const handle = `${categoryHandle.join("/")}`
+  const handle = categoryHandle
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment)
+      } catch {
+        return segment
+      }
+    })
+    .join("/")
 
   const next = {
     ...(await getCacheOptions("categories")),
@@ -38,7 +57,8 @@ export const getCategoryByHandle = async (categoryHandle: string[]) => {
       `/store/product-categories`,
       {
         query: {
-          fields: "*category_children, *products",
+          fields:
+            "*category_children, *category_children.category_children, *category_children.category_children.category_children, *parent_category, *parent_category.parent_category, *products",
           handle,
         },
         next,
