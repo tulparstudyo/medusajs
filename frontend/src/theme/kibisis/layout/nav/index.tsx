@@ -6,7 +6,6 @@ import MenuLink from "../menu-link"
 import CartTrigger from "./cart-trigger"
 import MobileMenu from "./mobile-menu"
 import SearchBox from "./search-box"
-import { STATIC_NAV_ITEMS } from "./static-links"
 import TopBar from "./top-bar"
 
 export default async function Nav() {
@@ -14,7 +13,7 @@ export default async function Nav() {
     getNavigation("main"),
     getContactSettings(),
   ])
-  const items = navigation.items.length > 0 ? navigation.items : STATIC_NAV_ITEMS
+  const items = navigation.items
   const name = storeName(contact)
   const words = name.split(/\s+/).filter(Boolean)
   const accent = words.length > 1 ? words.pop() : null
@@ -25,7 +24,7 @@ export default async function Nav() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:gap-4 lg:gap-8">
-            <MobileMenu items={items} />
+            {items.length > 0 && <MobileMenu items={items} />}
             <LocalizedClientLink
               href="/"
               aria-label={name}
@@ -76,13 +75,15 @@ export default async function Nav() {
             </div>
           </div>
         </div>
-        <nav className="hidden md:block bg-white border-t border-slate-100">
-          <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs font-semibold text-slate-700 py-2.5">
-            {items.map((item) => (
-              <NavEntry key={item.id} item={item} />
-            ))}
-          </div>
-        </nav>
+        {items.length > 0 && (
+          <nav className="hidden md:block bg-white border-t border-slate-100">
+            <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs font-semibold text-slate-700 py-2.5">
+              {items.map((item) => (
+                <NavEntry key={item.id} item={item} />
+              ))}
+            </div>
+          </nav>
+        )}
       </header>
     </>
   )

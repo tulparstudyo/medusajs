@@ -52,13 +52,9 @@ export default async function Footer() {
   return (
     <footer className="bg-white border-t border-slate-200 mt-12 text-slate-600 text-xs">
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
-        {navigation.items.length > 0 ? (
-          navigation.items.map((column) => (
-            <FooterColumn key={column.id} item={column} />
-          ))
-        ) : (
-          <StaticFooterColumns />
-        )}
+        {navigation.items.map((column) => (
+          <FooterColumn key={column.id} item={column} />
+        ))}
         {socialLinks.length > 0 && (
           <div>
             <h4 className="font-bold text-slate-900 mb-3 text-xs uppercase tracking-wider">
@@ -224,54 +220,5 @@ function FooterLinks({ items }: { items: StoreNavItem[] }) {
         </li>
       ))}
     </ul>
-  )
-}
-
-function StaticFooterColumns() {
-  return (
-    <>
-      <div>
-        <h4 className="font-bold text-slate-900 mb-3 text-xs uppercase tracking-wider">
-          Kurumsal
-        </h4>
-        <ul className="space-y-2 text-[11px]">
-          {[
-            "Hakkımızda",
-            "İş Ortaklarımız",
-            "Yatırımcı İlişkileri",
-            "Kariyer Fırsatları",
-            "Kişisel Verilerin Korunması",
-            "Bilgi Güvenliği Politikası",
-          ].map((label) => (
-            <li key={label}>
-              <a href="#" className="hover:text-orange-600">
-                {label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <h4 className="font-bold text-slate-900 mb-3 text-xs uppercase tracking-wider">
-          VipNova
-        </h4>
-        <ul className="space-y-2 text-[11px]">
-          {[
-            "Hayat Burada Başlar",
-            "Satıcı Olmak İstiyorum",
-            "VipNova İşyeri Olmak",
-            "Girişimci Kadınlara Destek",
-            "Teslimat Noktası Olmak",
-            "Banka Kampanyaları",
-          ].map((label) => (
-            <li key={label}>
-              <a href="#" className="hover:text-orange-600">
-                {label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </>
   )
 }
