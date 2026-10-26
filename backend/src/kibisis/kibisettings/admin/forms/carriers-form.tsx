@@ -267,20 +267,18 @@ function Marketplace({ catalog, installer }: { catalog: CarrierCatalogDTO; insta
               </Text>
             </div>
             <div className="flex items-center gap-x-2">
-              <Badge size="2xsmall" color={item.status === "available" ? "blue" : "grey"}>
-                {item.status === "available" ? "Satın alınabilir" : "Yakında"}
-              </Badge>
-              {item.status === "available" && (
+              {item.status === "available" ? (
                 <>
-                  {catalog.store_url && (
-                    <a
-                      href={catalog.store_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="txt-compact-small text-ui-fg-interactive hover:underline"
-                    >
-                      Satın al
+                  {catalog.store_url ? (
+                    <a href={catalog.store_url} target="_blank" rel="noreferrer" title="Satın al">
+                      <Badge size="2xsmall" color="blue" className="cursor-pointer hover:underline">
+                        Satın alınabilir
+                      </Badge>
                     </a>
+                  ) : (
+                    <Badge size="2xsmall" color="blue">
+                      Satın alınabilir
+                    </Badge>
                   )}
                   <Button
                     type="button"
@@ -292,6 +290,10 @@ function Marketplace({ catalog, installer }: { catalog: CarrierCatalogDTO; insta
                     Kur
                   </Button>
                 </>
+              ) : (
+                <Badge size="2xsmall" color="grey">
+                  Yakında
+                </Badge>
               )}
             </div>
           </div>
