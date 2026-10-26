@@ -42,6 +42,9 @@ yarn-error.log*
 # Junction to routes. Recreated by scripts/link-routes.js
 backend/src/api
 
+# restart.sh logs and pid files
+/logs
+
 # Turbo
 .turbo
 .vscode

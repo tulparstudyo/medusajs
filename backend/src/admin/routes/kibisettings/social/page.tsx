@@ -6,7 +6,7 @@ import SocialForm from "../../../../kibisis/kibisettings/admin/forms/social-form
 import SettingsScreen from "../../../../kibisis/kibisettings/admin/settings-screen"
 
 export const config = defineRouteConfig({
-  label: "Sosyal Medya ve Uygulamalar",
+  label: "Sosyal Medya",
 })
 
 const SocialSettingsPage = () => (

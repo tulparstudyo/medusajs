@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "medusa build",
-    "start": "copy /Y .env .medusa\\server\\.env >NUL && cd .medusa\\server && medusa start",
+    "start": "node -e \"require('fs').copyFileSync('.env','.medusa/server/.env')\" && cd .medusa/server && medusa start",
     "dev": "medusa develop",
     "lint": "medusa lint",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
