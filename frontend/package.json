@@ -36,7 +36,8 @@
     "react-dom": "19.0.5",
     "react-instantsearch": "^7.46.0",
     "server-only": "^0.0.1",
-    "tailwindcss-radix": "^2.8.0"
+    "tailwindcss-radix": "^2.8.0",
+    "yet-another-react-lightbox": "^3.32.2"
   },
   "devDependencies": {
     "@babel/core": "^7.17.5",

@@ -3,16 +3,20 @@
 import type { ProductColor } from "@lib/data/product-colors"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import dynamic from "next/dynamic"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { ReactNode, useEffect, useMemo, useState } from "react"
+import { PointerEvent, ReactNode, useEffect, useMemo, useState } from "react"
 
 import type { Translate } from "../i18n"
 import { useMoney, useT } from "../i18n/client"
 import { ThemeIcon } from "../icons"
 import { useKibisisCart } from "../layout/shell/cart-context"
 
+const ImageLightbox = dynamic(() => import("./image-lightbox"), { ssr: false })
+
 const FREE_SHIPPING_FROM = 150
 const PREMIUM_RATE = 0.03
+const HOVER_ZOOM = 2.5
 
 type Price = {
   price: number
@@ -248,6 +252,9 @@ export default function ProductOverview({
   const money = useMoney()
   const [options, setOptions] = useState<Record<string, string>>({})
   const [activeImage, setActiveImage] = useState(0)
+  const [hoverZoom, setHoverZoom] = useState<{ x: number; y: number } | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxLoaded, setLightboxLoaded] = useState(false)
   const [seededId, setSeededId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -311,6 +318,24 @@ export default function ProductOverview({
   const image = gallery[imageIndex]
   const stepImage = (step: number) =>
     setActiveImage((imageIndex + step + gallery.length) % gallery.length)
+  const openLightbox = () => {
+    setHoverZoom(null)
+    setLightboxLoaded(true)
+    setLightboxOpen(true)
+  }
+  const trackZoom = (event: PointerEvent<HTMLDivElement>) => {
+    const overControl = (event.target as HTMLElement).closest("[data-gallery-control]")
+    if (event.pointerType !== "mouse" || overControl) {
+      setHoverZoom(null)
+      return
+    }
+
+    const box = event.currentTarget.getBoundingClientRect()
+    setHoverZoom({
+      x: ((event.clientX - box.left) / box.width) * 100,
+      y: ((event.clientY - box.top) / box.height) * 100,
+    })
+  }
 
   useEffect(() => {
     setActiveImage(0)
@@ -349,18 +374,40 @@ export default function ProductOverview({
     <section id="product-overview" className="max-w-7xl mx-auto px-4 py-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-5 mx-auto w-full max-w-[480px] bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="relative w-full aspect-[2/3] max-h-[670px] bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center">
+          <div
+            className={`relative w-full aspect-[2/3] max-h-[670px] bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center ${
+              image ? "cursor-zoom-in" : ""
+            }`}
+            onPointerMove={image ? trackZoom : undefined}
+            onPointerLeave={() => setHoverZoom(null)}
+          >
             {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image.url}
-                alt={product.title ?? ""}
-                className="w-full h-full object-contain"
-              />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image.url}
+                  alt={product.title ?? ""}
+                  className="w-full h-full object-contain pointer-events-none select-none transition-transform duration-150 ease-out"
+                  style={
+                    hoverZoom
+                      ? {
+                          transform: `scale(${HOVER_ZOOM})`,
+                          transformOrigin: `${hoverZoom.x}% ${hoverZoom.y}%`,
+                        }
+                      : undefined
+                  }
+                />
+                <button
+                  type="button"
+                  aria-label={t("product.zoom_image")}
+                  className="absolute inset-0 w-full h-full cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-orange-600"
+                  onClick={openLightbox}
+                />
+              </>
             ) : null}
             {badge ? (
               <span
-                className={`absolute top-3 left-3 ${badge.className} text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase`}
+                className={`absolute top-3 left-3 pointer-events-none ${badge.className} text-white text-[10px] font-black px-2.5 py-1 rounded-md uppercase`}
               >
                 {badge.label}
               </span>
@@ -369,6 +416,7 @@ export default function ProductOverview({
               <>
                 <button
                   type="button"
+                  data-gallery-control
                   aria-label={t("product.previous_image")}
                   className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors"
                   onClick={() => stepImage(-1)}
@@ -377,6 +425,7 @@ export default function ProductOverview({
                 </button>
                 <button
                   type="button"
+                  data-gallery-control
                   aria-label={t("product.next_image")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors"
                   onClick={() => stepImage(1)}
@@ -621,6 +670,16 @@ export default function ProductOverview({
           {aside}
         </aside>
       </div>
+      {lightboxLoaded && gallery.length ? (
+        <ImageLightbox
+          images={gallery}
+          index={imageIndex}
+          open={lightboxOpen}
+          title={product.title ?? ""}
+          onClose={() => setLightboxOpen(false)}
+          onIndex={setActiveImage}
+        />
+      ) : null}
     </section>
   )
 }

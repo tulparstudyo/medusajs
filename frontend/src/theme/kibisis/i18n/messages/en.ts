@@ -113,6 +113,12 @@ export const en = {
 
   "product.previous_image": "Previous image",
   "product.next_image": "Next image",
+  "product.zoom_image": "Enlarge image",
+  "product.gallery": "Product images",
+  "product.gallery_close": "Close",
+  "product.gallery_thumbnails": "Thumbnails",
+  "product.gallery_zoom_in": "Zoom in",
+  "product.gallery_zoom_out": "Zoom out",
   "product.reviews": "{count} Reviews",
   "product.you_save": "You save {amount}",
   "product.installments": "{count} x {amount} without a credit card",

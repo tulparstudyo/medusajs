@@ -16,6 +16,9 @@ const CDN_DIR = process.env.CDN_DIR || path.resolve(BACKEND_DIR, "../cdn/files")
 const PRIVATE_UPLOAD_DIR =
   process.env.PRIVATE_UPLOAD_DIR || path.resolve(BACKEND_DIR, "uploads")
 
+// kibiimport's image cleanup reads the folder the file provider writes to.
+process.env.CDN_DIR = CDN_DIR
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,

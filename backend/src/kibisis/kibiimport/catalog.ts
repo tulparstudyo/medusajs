@@ -7,18 +7,25 @@ import {
   updateProductOptionsWorkflow,
   updateProductVariantsWorkflow,
   updateProductsWorkflow,
-  uploadFilesWorkflow,
   upsertVariantPricesWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { ContainerRegistrationKeys, ProductStatus } from "@medusajs/framework/utils"
 
 import { KIBIGROUP_MODULE } from "../kibigroup"
 import KibigroupModuleService from "../kibigroup/service"
-import { HttpStatusException, ImportException } from "./errors"
+import { ImportException } from "./errors"
+import {
+  deleteImages,
+  downloadImages,
+  sameSources,
+  StoredImages,
+  storedImagesOf,
+  UploadedImages,
+  uploadImages,
+} from "./images"
 import { slugify } from "./lib/slug"
 import { compareMoney } from "./money"
 import { mergePrices, PriceInput, PriceRow, pricesFor } from "./prices"
-import { remoteGet } from "./remote-get"
 import KibiimportModuleService from "./service"
 import { ImportedProduct, ImportedVariant, ImportResult, StockResult } from "./types"
 
@@ -63,13 +70,8 @@ type ProductRow = {
 
 type WrittenCatalog = Omit<
   ImportResult,
-  "currency" | "warnings" | "category" | "images" | "stock" | "colorUrls"
+  "currency" | "warnings" | "category" | "images" | "imagesKept" | "stock" | "colorUrls"
 >
-
-type DownloadedImage = {
-  bytes: Buffer
-  mediaType: string
-}
 
 export async function writeProduct(
   container: MedusaContainer,
@@ -88,8 +90,6 @@ export async function writeProduct(
   const context = await loadContext(container, categoryId)
   const currency = pickCurrency(context, currencyCode)
   const warnings = currencyWarnings(product.currency, currency)
-  const downloaded = await downloadImages(product.images)
-  const imageUrls = await uploadImages(container, product.code, downloaded)
   const existingId = await findExistingProduct(container, service, product, color)
   const existing = existingId ? await loadProduct(container, existingId) : null
 
@@ -97,9 +97,30 @@ export async function writeProduct(
     throw new ImportException("Kayıtlı ürün bulunamadı.")
   }
 
-  const written = existing
-    ? await updateCatalog(container, product, color, categoryId, currency, existing, imageUrls)
-    : await createCatalog(container, product, color, categoryId, context, currency, imageUrls)
+  const previous = storedImagesOf(existing?.metadata)
+  const kept = previous && sameSources(previous.sources, product.images) ? previous : null
+  const uploaded = kept
+    ? null
+    : await uploadImages(container, product.code, await downloadImages(product.images))
+  const stored: StoredImages = kept ?? { sources: product.images, keys: uploaded?.keys ?? [] }
+
+  let written: WrittenCatalog
+
+  try {
+    written = existing
+      ? await updateCatalog(container, product, color, categoryId, currency, existing, uploaded, stored)
+      : await createCatalog(container, product, color, categoryId, context, currency, uploaded, stored)
+  } catch (error) {
+    await deleteImages(container, uploaded?.keys ?? [])
+    throw error
+  }
+
+  if (uploaded && previous) {
+    await deleteImages(
+      container,
+      previous.keys.filter((key) => !uploaded.keys.includes(key))
+    )
+  }
 
   await service.rememberProduct({
     source: product.source,
@@ -118,7 +139,8 @@ export async function writeProduct(
     currency,
     warnings,
     category: context.categoryName,
-    images: imageUrls.length,
+    images: stored.keys.length,
+    imagesKept: kept !== null,
     stock,
     colorUrls: product.colorUrls,
   }
@@ -322,7 +344,7 @@ async function findExistingProduct(
 ): Promise<string | null> {
   const link = await service.findProductLink(product.code, color)
 
-  if (link) {
+  if (link && (await productExists(container, link.product_id))) {
     await assertBarcodesBelong(container, product, link.product_id)
     return link.product_id
   }
@@ -346,6 +368,16 @@ async function findExistingProduct(
   }
 
   return ownerId
+}
+
+async function productExists(container: MedusaContainer, id: string): Promise<boolean> {
+  const { data } = await graph(container).graph({
+    entity: "product",
+    fields: ["id"],
+    filters: { id },
+  })
+
+  return data.length > 0
 }
 
 async function assertBarcodesBelong(
@@ -395,10 +427,12 @@ async function createCatalog(
   categoryId: string,
   context: StoreContext,
   currency: string,
-  imageUrls: string[]
+  uploaded: UploadedImages | null,
+  stored: StoredImages
 ): Promise<WrittenCatalog> {
-  const axis = axisName(product)
+  const axes = axisNames(product)
   const handle = await availableHandle(container, product, color)
+  const imageUrls = uploaded?.urls ?? []
   const { result } = await createProductsWorkflow(container).run({
     input: {
       products: [
@@ -413,10 +447,10 @@ async function createCatalog(
           shipping_profile_id: context.shippingProfileId,
           category_ids: [categoryId],
           sales_channels: context.salesChannelIds.map((id) => ({ id })),
-          metadata: metadataOf(product, color),
-          options: [{ title: axis, values: optionValues(product, axis) }],
+          metadata: metadataOf(product, color, stored),
+          options: axes.map((axis) => ({ title: axis, values: optionValues(product, axis) })),
           variants: product.variants.map((variant) =>
-            variantInput(product, variant, axis, pricesFor(variant.price, currency))
+            variantInput(product, variant, axes, pricesFor(variant.price, currency))
           ),
         },
       ],
@@ -447,7 +481,8 @@ async function updateCatalog(
   categoryId: string,
   currency: string,
   existing: ProductRow,
-  imageUrls: string[]
+  uploaded: UploadedImages | null,
+  stored: StoredImages
 ): Promise<WrittenCatalog> {
   const counts = await syncVariants(container, product, existing, currency)
 
@@ -459,12 +494,16 @@ async function updateCatalog(
           title: product.name,
           subtitle: product.brand ?? undefined,
           description: describe(product),
-          thumbnail: imageUrls[0] ?? null,
-          images: imageUrls.map((url) => ({ url })),
+          ...(uploaded
+            ? {
+                thumbnail: uploaded.urls[0] ?? null,
+                images: uploaded.urls.map((url) => ({ url })),
+              }
+            : {}),
           category_ids: unique([...existing.categoryIds, categoryId]),
           metadata: {
             ...(existing.metadata ?? {}),
-            ...metadataOf(product, color),
+            ...metadataOf(product, color, stored),
           },
         },
       ],
@@ -486,23 +525,28 @@ async function syncVariants(
   existing: ProductRow,
   currency: string
 ): Promise<{ createdVariants: number; updatedVariants: number; removedVariants: number }> {
-  if (existing.options.length !== 1) {
-    throw new ImportException("Ürünün varyant seçeneği içe aktarmayla güncellenemiyor.")
+  const axes = axisNames(product)
+
+  if (existing.options.length !== axes.length) {
+    throw new ImportException(
+      `Ürünün ${existing.options.length} varyant seçeneği var, kaynakta ${axes.length}. Ürünü silip yeniden içe aktarın.`
+    )
   }
 
-  const axis = axisName(product)
-  const option = existing.options[0]
-  const desired = optionValues(product, axis)
-  const currentValues = option.values.map((value) => value.value)
-  const union = unique([...currentValues, ...desired])
+  const pairs = pairOptions(existing.options, axes)
 
-  if (option.title !== axis || union.length !== currentValues.length || union.some((value) => !currentValues.includes(value))) {
-    await updateProductOptionsWorkflow(container).run({
-      input: {
-        selector: { id: option.id },
-        update: { title: axis, values: union },
-      },
-    })
+  for (const { option, axis } of pairs) {
+    const currentValues = option.values.map((value) => value.value)
+    const union = unique([...currentValues, ...optionValues(product, axis)])
+
+    if (option.title !== axis || union.length !== currentValues.length) {
+      await updateProductOptionsWorkflow(container).run({
+        input: {
+          selector: { id: option.id },
+          update: { title: axis, values: union },
+        },
+      })
+    }
   }
 
   const byBarcode = new Map(
@@ -519,14 +563,14 @@ async function syncVariants(
     const current = byBarcode.get(variant.barcode)
 
     if (!current) {
-      const next = variantInput(product, variant, axis, pricesFor(variant.price, currency))
+      const next = variantInput(product, variant, axes, pricesFor(variant.price, currency))
       creating.push({ ...next, product_id: existing.id, manage_inventory: true })
       continue
     }
 
     kept.add(current.id)
     const prices = mergePrices(current.prices, variant.price, currency)
-    updating.push({ id: current.id, ...variantInput(product, variant, axis, prices, current.metadata) })
+    updating.push({ id: current.id, ...variantInput(product, variant, axes, prices, current.metadata) })
   }
 
   if (creating.length) {
@@ -566,13 +610,18 @@ async function syncVariants(
     })
   }
 
-  if (desired.length !== union.length) {
-    await updateProductOptionsWorkflow(container).run({
-      input: {
-        selector: { id: option.id },
-        update: { values: desired },
-      },
-    })
+  for (const { option, axis } of pairs) {
+    const desired = optionValues(product, axis)
+    const union = unique([...option.values.map((value) => value.value), ...desired])
+
+    if (desired.length !== union.length) {
+      await updateProductOptionsWorkflow(container).run({
+        input: {
+          selector: { id: option.id },
+          update: { values: desired },
+        },
+      })
+    }
   }
 
   return {
@@ -585,11 +634,11 @@ async function syncVariants(
 function variantInput(
   product: ImportedProduct,
   variant: ImportedVariant,
-  axis: string,
+  axes: string[],
   prices: PriceInput[] | undefined,
   metadata: Record<string, unknown> | null = null
 ) {
-  const value = optionValue(variant, axis)
+  const values = axes.map((axis) => optionValue(variant, axis))
   const compareAt =
     variant.compareAtPrice &&
     variant.price &&
@@ -598,10 +647,10 @@ function variantInput(
       : null
 
   return {
-    title: value,
+    title: values.join(" / "),
     sku: variant.barcode,
     barcode: variant.barcode,
-    options: { [axis]: value },
+    options: Object.fromEntries(axes.map((axis, index) => [axis, values[index]])),
     ...(prices?.length ? { prices } : {}),
     metadata: {
       ...(metadata ?? {}),
@@ -765,63 +814,45 @@ async function handleExists(container: MedusaContainer, handle: string): Promise
   return data.length > 0
 }
 
-async function downloadImages(urls: string[]): Promise<DownloadedImage[]> {
-  const images: DownloadedImage[] = []
+function axisNames(product: ImportedProduct): string[] {
+  const names = unique(
+    product.variants.flatMap((variant) => variant.attributes.map((attribute) => attribute.name)).filter(Boolean)
+  )
 
-  for (const url of urls) {
-    const response = await remoteGet(url, "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
-
-    if (response.status < 200 || response.status >= 300) {
-      throw new HttpStatusException(
-        response.status,
-        `Ürün görseli için HTTP ${response.status} döndü: ${url}`
-      )
-    }
-
-    if (!response.mediaType.startsWith("image/")) {
-      throw new ImportException(`Ürün görseli indirilemedi: ${url}`)
-    }
-
-    images.push({ bytes: response.body, mediaType: response.mediaType })
-  }
-
-  return images
+  return names.length ? names : ["Seçenek"]
 }
 
-async function uploadImages(
-  container: MedusaContainer,
-  code: string,
-  images: DownloadedImage[]
-): Promise<string[]> {
-  if (!images.length) {
-    return []
+/**
+ * PairOptions matches the stored options to the source axes by title. An
+ * option whose title the source renamed takes the next axis left over.
+ */
+function pairOptions(
+  options: ProductOptionRow[],
+  axes: string[]
+): { option: ProductOptionRow; axis: string }[] {
+  const left = [...options]
+  const pairs: { option: ProductOptionRow; axis: string }[] = []
+  const unmatched: string[] = []
+
+  for (const axis of axes) {
+    const index = left.findIndex((option) => option.title === axis)
+
+    if (index >= 0) {
+      pairs.push({ option: left.splice(index, 1)[0] as ProductOptionRow, axis })
+    } else {
+      unmatched.push(axis)
+    }
   }
 
-  const slug = slugify(code)
-  const { result } = await uploadFilesWorkflow(container).run({
-    input: {
-      files: images.map((image, index) => ({
-        filename: `${slug}-${index + 1}.${extension(image.mediaType)}`,
-        mimeType: image.mediaType,
-        content: image.bytes.toString("base64"),
-        access: "public" as const,
-      })),
-    },
+  unmatched.forEach((axis, index) => {
+    const option = left[index]
+
+    if (option) {
+      pairs.push({ option, axis })
+    }
   })
 
-  return result.map((file) => file.url)
-}
-
-function axisName(product: ImportedProduct): string {
-  for (const variant of product.variants) {
-    const name = variant.attributes[0]?.name
-
-    if (name) {
-      return name
-    }
-  }
-
-  return "Seçenek"
+  return pairs
 }
 
 function optionValues(product: ImportedProduct, axis: string): string[] {
@@ -865,7 +896,11 @@ function describe(product: ImportedProduct): string {
   return lines.join("\n")
 }
 
-function metadataOf(product: ImportedProduct, color: string): Record<string, unknown> {
+function metadataOf(
+  product: ImportedProduct,
+  color: string,
+  images: StoredImages
+): Record<string, unknown> {
   return {
     kibiimport: {
       source: product.source,
@@ -877,6 +912,8 @@ function metadataOf(product: ImportedProduct, color: string): Record<string, unk
       locale: product.locale,
       currency: product.currency,
       attributes: product.attributes,
+      image_sources: images.sources,
+      image_keys: images.keys,
     },
   }
 }
@@ -889,18 +926,6 @@ function currencyWarnings(source: string | null, currency: string): string[] {
   return [
     `Kaynak fiyat ${source.toUpperCase()}, kayıt ${currency.toUpperCase()}. Sayı kur çevrimi yapılmadan yazıldı.`,
   ]
-}
-
-function extension(mediaType: string): string {
-  const extensions: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/gif": "gif",
-    "image/avif": "avif",
-  }
-
-  return extensions[mediaType] ?? "jpg"
 }
 
 function graph(container: MedusaContainer): Graph {

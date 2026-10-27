@@ -115,6 +115,12 @@ export const tr: Messages = {
 
   "product.previous_image": "Önceki görsel",
   "product.next_image": "Sonraki görsel",
+  "product.zoom_image": "Görseli büyüt",
+  "product.gallery": "Ürün görselleri",
+  "product.gallery_close": "Kapat",
+  "product.gallery_thumbnails": "Küçük resimler",
+  "product.gallery_zoom_in": "Yakınlaştır",
+  "product.gallery_zoom_out": "Uzaklaştır",
   "product.reviews": "{count} Değerlendirme",
   "product.you_save": "Kazancınız {amount}",
   "product.installments": "Kartsız {count} x {amount}",

@@ -1,6 +1,8 @@
 import { ImportException } from "./errors"
 import { hostMatches, productHost } from "./lib/urls"
 import { ProductAdapter, ProductClient } from "./types"
+import { KozmoyaAdapter } from "./sources/kozmoya/adapter"
+import { KozmoyaClient } from "./sources/kozmoya/client"
 import { TrendyolAdapter } from "./sources/trendyol/adapter"
 import { TrendyolClient } from "./sources/trendyol/client"
 
@@ -25,6 +27,11 @@ export class SourceRegistry {
       hosts: ["trendyol.com"],
       client: TrendyolClient,
       adapter: TrendyolAdapter,
+    },
+    {
+      hosts: ["kozmoya.com"],
+      client: KozmoyaClient,
+      adapter: KozmoyaAdapter,
     },
   ]
 

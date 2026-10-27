@@ -116,6 +116,12 @@ export const ru: Messages = {
 
   "product.previous_image": "Предыдущее изображение",
   "product.next_image": "Следующее изображение",
+  "product.zoom_image": "Увеличить изображение",
+  "product.gallery": "Фото товара",
+  "product.gallery_close": "Закрыть",
+  "product.gallery_thumbnails": "Миниатюры",
+  "product.gallery_zoom_in": "Увеличить",
+  "product.gallery_zoom_out": "Уменьшить",
   "product.reviews": "Отзывов: {count}",
   "product.you_save": "Ваша выгода {amount}",
   "product.installments": "{count} x {amount} без кредитной карты",

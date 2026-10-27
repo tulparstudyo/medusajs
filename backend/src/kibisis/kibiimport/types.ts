@@ -42,6 +42,8 @@ export type ImportResult = {
   updatedVariants: number
   removedVariants: number
   images: number
+  /** The source images did not change, so the stored files were reused. */
+  imagesKept: boolean
   currency: string
   warnings: string[]
   category: string

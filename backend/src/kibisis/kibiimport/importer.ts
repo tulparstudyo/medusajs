@@ -35,7 +35,7 @@ export function renderResult(result: ImportResult): string {
   return [
     `${action}: ${result.name} (${result.code}, ${result.productId}).`,
     `Varyantlar: ${result.createdVariants} yeni, ${result.updatedVariants} güncellendi, ${result.removedVariants} silindi.`,
-    `Görseller: ${result.images}.`,
+    `Görseller: ${result.images}${result.imagesKept ? " (değişmedi, yeniden yüklenmedi)" : ""}.`,
     `Fiyat ${result.currency.toUpperCase()} olarak yazıldı; diğer para birimlerindeki fiyatlar korundu.`,
     `Kategori: ${result.category}.`,
     ...result.warnings,
