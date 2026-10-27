@@ -1,9 +1,15 @@
 import { HttpTypes } from "@medusajs/types"
 
 import type { KibisisProduct } from "../home/data/products"
+import type { Translate } from "../i18n"
 
 function cheapest(product: HttpTypes.StoreProduct) {
-  let best: { price: number; original: number; variantId: string } | null = null
+  let best: {
+    price: number
+    original: number
+    variantId: string
+    currency?: string
+  } | null = null
 
   for (const variant of product.variants ?? []) {
     const amount = variant.calculated_price?.calculated_amount
@@ -17,7 +23,12 @@ function cheapest(product: HttpTypes.StoreProduct) {
         : amount
 
     if (!best || amount < best.price) {
-      best = { price: amount, original, variantId: variant.id }
+      best = {
+        price: amount,
+        original,
+        variantId: variant.id,
+        currency: variant.calculated_price?.currency_code ?? undefined,
+      }
     }
   }
 
@@ -25,7 +36,8 @@ function cheapest(product: HttpTypes.StoreProduct) {
 }
 
 export function toListingCard(
-  product: HttpTypes.StoreProduct
+  product: HttpTypes.StoreProduct,
+  t: Translate
 ): KibisisProduct | null {
   const price = cheapest(product)
   if (!price || !product.id) {
@@ -42,13 +54,14 @@ export function toListingCard(
     title: product.title ?? "",
     price: price.price,
     oldPrice: onSale ? price.original : undefined,
+    currency: price.currency,
     image: product.thumbnail || product.images?.[0]?.url || "",
     imageAlt: product.title ?? "",
     rating: "—",
     reviews: "",
     note: "",
     noteClass: "text-slate-400",
-    badge: onSale ? "İNDİRİM" : "ÜRÜN",
+    badge: onSale ? t("badge.sale") : t("badge.product"),
     badgeClass: onSale ? "bg-rose-500" : "bg-slate-500",
   }
 }

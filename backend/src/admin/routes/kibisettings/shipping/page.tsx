@@ -6,7 +6,7 @@ import ShippingForm from "../../../../kibisis/kibisettings/admin/forms/shipping-
 import SettingsScreen from "../../../../kibisis/kibisettings/admin/settings-screen"
 
 export const config = defineRouteConfig({
-  label: "Kargo Gönderi Ayarları",
+  label: "Kargo Ayarları",
 })
 
 const ShippingSettingsPage = () => (

@@ -2,11 +2,11 @@
 
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
-import { getCacheOptions } from "./cookies"
+import { getCatalogCacheOptions } from "./cookies"
 
 export const retrieveCollection = async (id: string) => {
   const next = {
-    ...(await getCacheOptions("collections")),
+    ...(await getCatalogCacheOptions("collections")),
   }
 
   return await sdk.client
@@ -24,7 +24,7 @@ export const listCollections = async (
   queryParams: Record<string, string> = {}
 ): Promise<{ collections: HttpTypes.StoreCollection[]; count: number }> => {
   const next = {
-    ...(await getCacheOptions("collections")),
+    ...(await getCatalogCacheOptions("collections")),
   }
 
   queryParams.limit = queryParams.limit || "100"
@@ -46,7 +46,7 @@ export const getCollectionByHandle = async (
   handle: string
 ): Promise<HttpTypes.StoreCollection | null> => {
   const next = {
-    ...(await getCacheOptions("collections")),
+    ...(await getCatalogCacheOptions("collections")),
   }
 
   return await sdk.client

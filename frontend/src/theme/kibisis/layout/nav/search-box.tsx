@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react"
 
+import { useT } from "../../i18n/client"
 import { ThemeIcon } from "../../icons"
 
 export default function SearchBox() {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -41,14 +43,14 @@ export default function SearchBox() {
           type="text"
           id="search-input"
           onFocus={() => setOpen(true)}
-          placeholder="Ürün, kategori veya marka ara..."
+          placeholder={t("search.placeholder")}
           className="w-full py-2.5 px-2 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
         />
         <button
           id="search-btn"
           className="bg-orange-600 hover:bg-orange-700 text-white font-semibold text-xs px-4 py-2.5 transition-colors shrink-0"
         >
-          ARA
+          {t("search.button")}
         </button>
       </div>
       <div
@@ -58,13 +60,13 @@ export default function SearchBox() {
         }absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 text-xs`}
       >
         <div className="text-[11px] font-semibold text-slate-400 px-3 py-1.5">
-          Popüler Aramalar
+          {t("search.popular")}
         </div>
         {(
           [
             ["speaker-wave", "Apple AirPods Pro"],
             ["fire", "Philips Airfryer XXL"],
-            ["bolt", "Akü Takviye Cihazı"],
+            ["bolt", t("search.jump_starter")],
           ] as const
         ).map(([icon, label]) => (
           <a

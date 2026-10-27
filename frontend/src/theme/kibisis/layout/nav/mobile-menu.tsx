@@ -3,9 +3,11 @@
 import type { StoreNavItem } from "@lib/data/navigation"
 import { MouseEvent, useEffect, useState } from "react"
 
+import { useT } from "../../i18n/client"
 import MenuLink from "../menu-link"
 
 export default function MobileMenu({ items }: { items: StoreNavItem[] }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function MobileMenu({ items }: { items: StoreNavItem[] }) {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
+        aria-label={open ? t("nav.close_menu") : t("nav.open_menu")}
         aria-expanded={open}
         aria-controls="mobile-main-menu"
         className="md:hidden flex items-center justify-center w-10 h-10 shrink-0 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"

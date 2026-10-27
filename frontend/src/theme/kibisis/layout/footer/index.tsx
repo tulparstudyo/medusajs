@@ -7,6 +7,8 @@ import {
   whatsappHref,
 } from "@lib/data/site-settings"
 
+import type { Translate } from "../../i18n"
+import { getKibiI18n } from "../../i18n/server"
 import { ThemeIcon, ThemeIconName } from "../../icons"
 import MenuLink from "../menu-link"
 
@@ -25,10 +27,10 @@ const SOCIAL_LINKS: ExternalLink[] = [
   { key: "linkedin", icon: "briefcase", label: "LinkedIn" },
 ]
 
-const APP_LINKS: ExternalLink[] = [
-  { key: "app_store", icon: "device-phone-mobile", label: "App Store'dan İndir" },
-  { key: "google_play", icon: "play", label: "Google Play'den Al" },
-  { key: "app_gallery", icon: "squares-2x2", label: "AppGallery ile Keşfet" },
+const appLinksFor = (t: Translate): ExternalLink[] => [
+  { key: "app_store", icon: "device-phone-mobile", label: t("footer.app_store") },
+  { key: "google_play", icon: "play", label: t("footer.google_play") },
+  { key: "app_gallery", icon: "squares-2x2", label: t("footer.app_gallery") },
 ]
 
 function withUrls(links: ExternalLink[], settings: SocialSettings) {
@@ -44,10 +46,11 @@ export default async function Footer() {
     getSocialSettings(),
     getContactSettings(),
   ])
+  const { t } = await getKibiI18n()
   const bottomStart = bottom.items.filter((item) => item.align !== "end")
   const bottomEnd = bottom.items.filter((item) => item.align === "end")
   const socialLinks = withUrls(SOCIAL_LINKS, social)
-  const appLinks = withUrls(APP_LINKS, social)
+  const appLinks = withUrls(appLinksFor(t), social)
 
   return (
     <footer className="bg-white border-t border-slate-200 mt-12 text-slate-600 text-xs">
@@ -58,7 +61,7 @@ export default async function Footer() {
         {socialLinks.length > 0 && (
           <div>
             <h4 className="font-bold text-slate-900 mb-3 text-xs uppercase tracking-wider">
-              Bizi Takip Edin
+              {t("footer.follow_us")}
             </h4>
             <ul className="space-y-2 text-[11px]">
               {socialLinks.map((link) => (
@@ -80,7 +83,7 @@ export default async function Footer() {
         {appLinks.length > 0 && (
           <div>
             <h4 className="font-bold text-slate-900 mb-3 text-xs uppercase tracking-wider">
-              Mobil Uygulamalar
+              {t("footer.mobile_apps")}
             </h4>
             <div className="space-y-2">
               {appLinks.map((link) => (
@@ -101,11 +104,11 @@ export default async function Footer() {
         {(contact.phone || contact.email || contact.whatsapp) && (
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
             <h4 className="font-bold text-slate-900 mb-3 text-xs uppercase tracking-wider">
-              Müşteri Destek
+              {t("footer.support")}
             </h4>
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
               <span className="text-[11px] text-slate-500">
-                Aklınıza takılan bir soru mu var?
+                {t("footer.question")}
               </span>
               {contact.phone && (
                 <>
@@ -116,7 +119,7 @@ export default async function Footer() {
                     {contact.phone}
                   </a>
                   <span className="text-[10px] text-slate-400 block mt-1">
-                    Haftanın 7 günü 08:00 - 24:00
+                    {t("footer.hours")}
                   </span>
                 </>
               )}
@@ -139,13 +142,13 @@ export default async function Footer() {
                       className="flex items-center gap-2 font-semibold text-emerald-700 hover:text-emerald-600 transition-colors"
                     >
                       <ThemeIcon name="chat-bubble-left-right" className="h-3.5 w-3.5 shrink-0" />
-                      WhatsApp ile yazın
+                      {t("footer.whatsapp")}
                     </a>
                   )}
                 </div>
               )}
               <button className="w-full mt-3 bg-white border border-slate-300 hover:border-orange-500 hover:text-orange-600 text-slate-800 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-                Çözüm Merkezine Git
+                {t("footer.help_center")}
               </button>
             </div>
           </div>
@@ -155,7 +158,7 @@ export default async function Footer() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-start">
             <span>
-              © 2026 VipNova Elektronik Hizmetler Tic. A.Ş. Tüm Hakları Saklıdır.
+              © 2026 VipNova Elektronik Hizmetler Tic. A.Ş. {t("footer.rights")}
             </span>
             {bottomStart.map((item) => (
               <BottomLink key={item.id} item={item} />

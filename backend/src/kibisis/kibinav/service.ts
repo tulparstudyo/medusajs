@@ -25,7 +25,7 @@ type UpdateMenuItemInput = {
 } & NormalizedTarget
 
 class KibinavModuleService extends MedusaService({
-  NavItem,
+  KibinavItem: NavItem,
 }) {
   async listMenu(menu: NavMenu): Promise<NavItemDTO[]> {
     const items = await this.listAll({ menu })
@@ -54,7 +54,7 @@ class KibinavModuleService extends MedusaService({
     const position =
       siblings.reduce((max, item) => Math.max(max, item.position), -1) + 1
 
-    const created = await this.createNavItems({
+    const created = await this.createKibinavItems({
       menu: input.menu,
       label: input.label,
       align: input.align,
@@ -77,7 +77,7 @@ class KibinavModuleService extends MedusaService({
   ): Promise<NavItemDTO> {
     await this.retrieveExisting(id, "Menü öğesi bulunamadı.")
 
-    const updated = await this.updateNavItems({
+    const updated = await this.updateKibinavItems({
       id,
       label: input.label,
       align: input.align,
@@ -95,7 +95,7 @@ class KibinavModuleService extends MedusaService({
   async deleteMenuItem(id: string): Promise<void> {
     await this.retrieveExisting(id, "Menü öğesi bulunamadı.")
 
-    const children = await this.listNavItems({ parent_id: id }, { take: 1 })
+    const children = await this.listKibinavItems({ parent_id: id }, { take: 1 })
     if (children.length) {
       throw new MedusaError(
         MedusaError.Types.CONFLICT,
@@ -103,7 +103,7 @@ class KibinavModuleService extends MedusaService({
       )
     }
 
-    await this.deleteNavItems(id)
+    await this.deleteKibinavItems(id)
   }
 
   async reorderMenu(
@@ -151,7 +151,7 @@ class KibinavModuleService extends MedusaService({
     }
 
     if (updates.length) {
-      await this.updateNavItems(
+      await this.updateKibinavItems(
         updates.map((update) => ({
           id: update.id,
           parent_id: update.parent_id,
@@ -174,7 +174,7 @@ class KibinavModuleService extends MedusaService({
 
   private async retrieveExisting(id: string, message: string) {
     try {
-      return await this.retrieveNavItem(id)
+      return await this.retrieveKibinavItem(id)
     } catch (error) {
       if (
         MedusaError.isMedusaError(error) &&
@@ -189,11 +189,11 @@ class KibinavModuleService extends MedusaService({
 
   private async listAll(filters: { menu: NavMenu }) {
     const pageSize = 200
-    const items: Awaited<ReturnType<KibinavModuleService["listNavItems"]>> = []
+    const items: Awaited<ReturnType<KibinavModuleService["listKibinavItems"]>> = []
     let skip = 0
 
     while (skip <= 5000) {
-      const page = await this.listNavItems(filters, {
+      const page = await this.listKibinavItems(filters, {
         take: pageSize,
         skip,
         order: { position: "ASC" },

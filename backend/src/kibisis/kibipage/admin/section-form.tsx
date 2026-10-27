@@ -21,11 +21,15 @@ import FastLinksForm, {
   readFastLinks,
 } from "./sections/fast-links-form"
 import IconBoxForm, { IconBoxSettings, readIconBox } from "./sections/icon-box-form"
+import TranslationsForm, { readTranslations } from "./translations-form"
+import { api } from "./api"
 import {
+  ContentLocale,
   isBannerSection,
   isFastLinksSection,
   isIconBoxSection,
   isProductSection,
+  isSectionType,
   PageKey,
   PRODUCT_PLACEMENT_LABELS,
   PRODUCT_PLACEMENTS,
@@ -34,6 +38,7 @@ import {
   readPlacement,
   SECTION_LABELS,
   SectionDTO,
+  SectionTranslations,
   SelectedProductSettings,
 } from "../types"
 
@@ -51,6 +56,7 @@ export type SectionFormValues = {
   ) & {
     placement?: ProductPlacement
     installments?: number
+    translations?: SectionTranslations
   }
 }
 
@@ -79,6 +85,11 @@ export default function SectionForm({
   const [boxes, setBoxes] = useState<IconBoxSettings>(readIconBox(null))
   const [placement, setPlacement] = useState<ProductPlacement>("below")
   const [installments, setInstallments] = useState(0)
+  const [translations, setTranslations] = useState<SectionTranslations>({})
+  const [contentLocales, setContentLocales] = useState<{
+    base: string
+    locales: ContentLocale[]
+  }>({ base: "", locales: [] })
   const [error, setError] = useState<string | null>(null)
   const isQuick = section?.type === "quick-categories"
   const isHero = section?.type === "hero-showcase"
@@ -106,8 +117,15 @@ export default function SectionForm({
     setBoxes(readIconBox(section.settings))
     setPlacement(readPlacement(section.settings, section.type))
     setInstallments(readInstallments(section.settings))
+    setTranslations(readTranslations(section.settings))
     setError(null)
   }, [section])
+
+  useEffect(() => {
+    api<{ base: string; locales: ContentLocale[] }>("/admin/kibipage/locales")
+      .then(setContentLocales)
+      .catch(() => setContentLocales({ base: "", locales: [] }))
+  }, [])
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -135,14 +153,15 @@ export default function SectionForm({
               : isBoxes
                 ? boxes
                 : {}
+    const localized = { ...content, translations }
     const settings =
       pageKey === "product"
         ? {
-            ...content,
+            ...localized,
             placement,
             ...(placement === "buy" && installments >= 2 ? { installments } : {}),
           }
-        : content
+        : localized
     try {
       await onSubmit({
         name: trimmed,
@@ -254,6 +273,29 @@ export default function SectionForm({
             ) : null}
             {isBoxes && section ? (
               <IconBoxForm key={section.id} value={boxes} onChange={setBoxes} />
+            ) : null}
+            {section && isSectionType(section.type) ? (
+              <TranslationsForm
+                key={section.id}
+                type={section.type}
+                baseLocale={contentLocales.base}
+                locales={contentLocales.locales}
+                content={
+                  isQuick
+                    ? items
+                    : isHero
+                      ? hero
+                      : isProducts
+                        ? products
+                        : isBanner
+                          ? banner
+                          : isLinks
+                            ? links
+                            : boxes
+                }
+                value={translations}
+                onChange={setTranslations}
+              />
             ) : null}
             {section && !isQuick && !isHero && !isProducts && !isBanner && !isLinks && !isBoxes ? (
               <Text size="small" className="text-ui-fg-subtle">

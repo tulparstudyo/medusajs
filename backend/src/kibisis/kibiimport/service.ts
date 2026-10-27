@@ -8,6 +8,9 @@ type JobRow = {
   id: string
   url: string
   category_id: string
+  location_ids?: unknown
+  currency_code?: string | null
+  parent_id?: string | null
   status: string
   result?: string | null
   exit_code?: number | null
@@ -25,6 +28,7 @@ type ProductLink = {
 }
 
 const RESULT_LIMIT = 65000
+const RECENT_LIMIT = 8
 
 class KibiimportModuleService extends MedusaService({
   ImportJob,
@@ -34,30 +38,47 @@ class KibiimportModuleService extends MedusaService({
     return await this.listImportJobs(
       {},
       {
-        take: 50,
+        take: RECENT_LIMIT,
         order: { created_at: "DESC" },
       }
     )
   }
 
-  async createPending(input: { url: string; category_id: string }): Promise<JobRow> {
+  async listByIds(ids: string[]): Promise<JobRow[]> {
+    if (!ids.length) {
+      return []
+    }
+
+    return await this.listImportJobs({ id: ids })
+  }
+
+  async listChildren(parentIds: string[]): Promise<JobRow[]> {
+    if (!parentIds.length) {
+      return []
+    }
+
+    return await this.listImportJobs({ parent_id: parentIds })
+  }
+
+  async listWaiting(): Promise<JobRow[]> {
+    return await this.listImportJobs({ status: ["pending", "processing"] })
+  }
+
+  async createPending(input: {
+    url: string
+    category_id: string
+    location_ids: string[]
+    currency_code: string | null
+    parent_id?: string | null
+  }): Promise<JobRow> {
     return await this.createImportJobs({
       url: input.url,
       category_id: input.category_id,
+      location_ids: input.location_ids,
+      currency_code: input.currency_code,
+      parent_id: input.parent_id ?? null,
       status: "pending",
     })
-  }
-
-  async isWaiting(url: string): Promise<boolean> {
-    const rows = await this.listImportJobs(
-      {
-        url,
-        status: ["pending", "processing"],
-      },
-      { take: 1 }
-    )
-
-    return rows.length > 0
   }
 
   async finishJob(
@@ -119,12 +140,22 @@ class KibiimportModuleService extends MedusaService({
     await this.createImportProducts(input)
   }
 
-  toJob(row: JobRow, categoryName: string | null): ImportJobDTO {
+  toJob(
+    row: JobRow,
+    categoryName: string | null,
+    locationNames: Map<string, string> = new Map()
+  ): ImportJobDTO {
+    const locationIds = locationIdsOf(row.location_ids)
+
     return {
       id: row.id,
       url: row.url,
       category_id: row.category_id,
       category_name: categoryName,
+      location_ids: locationIds,
+      location_names: locationIds.map((id) => locationNames.get(id) ?? id),
+      currency_code: row.currency_code ?? null,
+      parent_id: row.parent_id ?? null,
       status: isImportStatus(row.status) ? row.status : "pending",
       result: row.result ?? null,
       exit_code: row.exit_code ?? null,
@@ -133,6 +164,14 @@ class KibiimportModuleService extends MedusaService({
       created_at: iso(row.created_at),
     }
   }
+}
+
+export function locationIdsOf(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return [...new Set(value.filter((id): id is string => typeof id === "string" && id !== ""))]
 }
 
 function clip(value: string): string {

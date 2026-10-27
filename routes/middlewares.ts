@@ -19,6 +19,11 @@ import { AssignGroupSchema } from "../kibisis/kibigroup/validators"
 import { CreateShipmentSchema, InstallCarrierSchema } from "../kibisis/kibicarrier/validators"
 import { SETTINGS_KEYS } from "../kibisis/kibisettings/types"
 import { SETTINGS_SCHEMAS } from "../kibisis/kibisettings/validators"
+import {
+  DeleteMemorySchema,
+  EditMemorySchema,
+  TranslateTextsSchema,
+} from "../kibisis/kibitranslate/validators"
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
@@ -84,6 +89,21 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/kibicarrier/carriers/:id/shipments",
       middlewares: [validateAndTransformBody(CreateShipmentSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibitranslate",
+      middlewares: [validateAndTransformBody(TranslateTextsSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibitranslate/memory/batch/delete",
+      middlewares: [validateAndTransformBody(DeleteMemorySchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibitranslate/memory/:id",
+      middlewares: [validateAndTransformBody(EditMemorySchema)],
     },
     ...SETTINGS_KEYS.map((key) => ({
       method: ["POST" as const],

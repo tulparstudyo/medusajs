@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { api } from "./api"
 import NavForm, { NavFormValues } from "./nav-form"
+import NavTranslate from "./nav-translate"
 import NavTree from "./nav-tree"
 import { toReorderPayload, buildTree } from "../lib/tree"
 import { NavAlign, NavItemDTO, NavMenu } from "../types"
@@ -133,20 +134,23 @@ export default function NavPage() {
             &quot;Altına bırak&quot; alanına bırakın.
           </Text>
         </div>
-        <Button
-          size="small"
-          onClick={() =>
-            setEditor({
-              mode: "create",
-              menu,
-              parent_id: null,
-              parentLabel: null,
-              align: menu === "bottom" ? "end" : "start",
-            })
-          }
-        >
-          Öğe ekle
-        </Button>
+        <div className="flex items-center gap-x-2">
+          <NavTranslate disabled={saving} />
+          <Button
+            size="small"
+            onClick={() =>
+              setEditor({
+                mode: "create",
+                menu,
+                parent_id: null,
+                parentLabel: null,
+                align: menu === "bottom" ? "end" : "start",
+              })
+            }
+          >
+            Öğe ekle
+          </Button>
+        </div>
       </div>
       <div className="px-6 py-4">
         <Tabs value={menu} onValueChange={(value) => setMenu(value as NavMenu)}>

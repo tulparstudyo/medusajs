@@ -10,14 +10,17 @@ import { renderPromoBanner } from "../sections/promo-banner/render"
 import PromoBannerView from "../sections/promo-banner/view"
 import SelectedProductSection from "../sections/selected-product"
 import type { StorePageSection } from "@lib/data/pages"
+import { getKibiI18n } from "../i18n/server"
 
-export default function SectionSlot({
+export default async function SectionSlot({
   section,
   countryCode,
 }: {
   section: StorePageSection
   countryCode: string
 }) {
+  const { t } = await getKibiI18n()
+
   switch (section.type) {
     case "quick-categories": {
       const html = renderQuickCategories(section.id, section.settings)
@@ -28,7 +31,7 @@ export default function SectionSlot({
       return <QuickCategoriesView html={html} />
     }
     case "hero-showcase": {
-      const html = renderHeroShowcase(section.id, section.settings)
+      const html = renderHeroShowcase(section.id, section.settings, t)
       if (!html) {
         return null
       }
@@ -40,7 +43,7 @@ export default function SectionSlot({
         <SelectedProductSection section={section} countryCode={countryCode} />
       )
     case "promo-banner": {
-      const html = renderPromoBanner(section.id, section.settings)
+      const html = renderPromoBanner(section.id, section.settings, t)
       if (!html) {
         return null
       }

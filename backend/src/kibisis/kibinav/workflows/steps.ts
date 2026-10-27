@@ -65,7 +65,7 @@ export const createNavItemStep = createStep(
       return
     }
 
-    await serviceOf(container).deleteNavItems(id)
+    await serviceOf(container).deleteKibinavItems(id)
   }
 )
 
@@ -97,7 +97,7 @@ export const updateNavItemStep = createStep(
       return
     }
 
-    await serviceOf(container).updateNavItems({
+    await serviceOf(container).updateKibinavItems({
       id: previous.id,
       label: previous.label,
       align: previous.align,
@@ -124,7 +124,7 @@ export const deleteNavItemStep = createStep(
       return
     }
 
-    await serviceOf(container).restoreNavItems([previous.id])
+    await serviceOf(container).restoreKibinavItems([previous.id])
   }
 )
 
@@ -146,7 +146,7 @@ export const reorderNavStep = createStep(
       return
     }
 
-    await serviceOf(container).updateNavItems(
+    await serviceOf(container).updateKibinavItems(
       previous.items.map((item) => ({
         id: item.id,
         parent_id: item.parent_id,

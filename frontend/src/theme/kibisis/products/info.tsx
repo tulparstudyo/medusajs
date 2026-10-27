@@ -1,6 +1,9 @@
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+import type { Translate } from "../i18n"
+import { getKibiI18n } from "../i18n/server"
+
 type Crumb = {
   id: string
   name: string
@@ -59,10 +62,10 @@ function labelOf(key: string) {
     return key
   }
 
-  return text.charAt(0).toLocaleUpperCase("tr-TR") + text.slice(1)
+  return text.charAt(0).toLocaleUpperCase("en-US") + text.slice(1)
 }
 
-function specValue(raw: unknown): string | null {
+function specValue(raw: unknown, t: Translate): string | null {
   if (typeof raw === "string") {
     const text = raw.trim()
     return text || null
@@ -73,44 +76,44 @@ function specValue(raw: unknown): string | null {
   }
 
   if (typeof raw === "boolean") {
-    return raw ? "Evet" : "Hayır"
+    return raw ? t("product.yes") : t("product.no")
   }
 
   return null
 }
 
-function specsOf(product: HttpTypes.StoreProduct) {
+function specsOf(product: HttpTypes.StoreProduct, t: Translate) {
   const specs: { label: string; value: string }[] = []
 
   if (product.material) {
-    specs.push({ label: "Materyal", value: product.material })
+    specs.push({ label: t("product.material"), value: product.material })
   }
 
   if (product.type?.value) {
-    specs.push({ label: "Tip", value: product.type.value })
+    specs.push({ label: t("product.type"), value: product.type.value })
   }
 
   if (product.weight) {
-    specs.push({ label: "Ağırlık", value: `${product.weight} g` })
+    specs.push({ label: t("product.weight"), value: `${product.weight} g` })
   }
 
   if (product.length || product.width || product.height) {
     const size = [product.length, product.width, product.height]
       .filter((part) => part != null)
       .join(" × ")
-    specs.push({ label: "Ölçü", value: size })
+    specs.push({ label: t("product.dimensions"), value: size })
   }
 
   if (product.origin_country) {
-    specs.push({ label: "Menşei", value: product.origin_country })
+    specs.push({ label: t("product.origin"), value: product.origin_country })
   }
 
   for (const [key, raw] of Object.entries(product.metadata ?? {})) {
-    if (HIDDEN_META.has(key.toLocaleLowerCase("tr-TR"))) {
+    if (HIDDEN_META.has(key.toLocaleLowerCase("en-US"))) {
       continue
     }
 
-    const value = specValue(raw)
+    const value = specValue(raw, t)
     if (!value) {
       continue
     }
@@ -133,14 +136,15 @@ function plainText(value: string) {
     .trim()
 }
 
-export function ProductBreadcrumbs({ product }: { product: HttpTypes.StoreProduct }) {
+export async function ProductBreadcrumbs({ product }: { product: HttpTypes.StoreProduct }) {
+  const { t } = await getKibiI18n()
   const trail = categoryTrail(product)
 
   return (
     <section id="product-breadcrumbs" className="bg-white border-b border-slate-200 py-2.5">
       <div className="max-w-7xl mx-auto px-4 flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <LocalizedClientLink href="/" className="hover:text-orange-600">
-          Ana Sayfa
+          {t("common.home")}
         </LocalizedClientLink>
         {trail.map((crumb) => (
           <span key={crumb.id} className="flex items-center gap-1.5">
@@ -160,9 +164,10 @@ export function ProductBreadcrumbs({ product }: { product: HttpTypes.StoreProduc
   )
 }
 
-export function ProductDetails({ product }: { product: HttpTypes.StoreProduct }) {
+export async function ProductDetails({ product }: { product: HttpTypes.StoreProduct }) {
+  const { t } = await getKibiI18n()
   const description = product.description ? plainText(product.description) : ""
-  const specs = specsOf(product)
+  const specs = specsOf(product, t)
 
   if (!description && !specs.length) {
     return null
@@ -173,7 +178,7 @@ export function ProductDetails({ product }: { product: HttpTypes.StoreProduct })
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="flex border-b border-slate-200 bg-slate-50 text-xs font-bold">
           <div className="px-6 py-3.5 border-b-2 border-orange-600 text-orange-600 bg-white">
-            Ürün Açıklaması
+            {t("product.description")}
           </div>
         </div>
         <div className="p-6 text-xs leading-relaxed text-slate-700 space-y-4">

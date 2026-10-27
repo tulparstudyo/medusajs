@@ -34,7 +34,6 @@ const defaultTheme = {
   },
   collections: CollectionTemplate,
   home: Home,
-  lang: "en",
   layout: {
     footer: Footer,
     nav: Nav,
@@ -56,7 +55,6 @@ const themes = {
     categories: KibisisCategoryTemplate,
     home: KibisisHome,
     products: KibisisProductTemplate,
-    lang: "tr",
     layout: {
       footer: KibisisFooter,
       nav: KibisisNav,

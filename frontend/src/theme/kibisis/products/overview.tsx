@@ -6,6 +6,8 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { ReactNode, useEffect, useMemo, useState } from "react"
 
+import type { Translate } from "../i18n"
+import { useMoney, useT } from "../i18n/client"
 import { ThemeIcon } from "../icons"
 import { useKibisisCart } from "../layout/shell/cart-context"
 
@@ -35,21 +37,6 @@ function metaText(
   }
 
   return null
-}
-
-function money(value: number) {
-  return value.toLocaleString("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
-
-function currencySuffix(code: string | undefined) {
-  if (!code || code.toLowerCase() === "try") {
-    return "TL"
-  }
-
-  return code.toUpperCase()
 }
 
 function optionsAsKeymap(variantOptions: HttpTypes.StoreProductVariant["options"]) {
@@ -221,20 +208,20 @@ function galleryOf(
   return []
 }
 
-function saleBadge(product: HttpTypes.StoreProduct, onSale: boolean) {
+function saleBadge(product: HttpTypes.StoreProduct, onSale: boolean, t: Translate) {
   if (onSale) {
-    return { label: "İNDİRİM", className: "bg-rose-500" }
+    return { label: t("badge.sale"), className: "bg-rose-500" }
   }
 
   const tags = (product.tags ?? []).map((tag) =>
     (tag.value ?? "").trim().toLocaleLowerCase("tr-TR")
   )
   if (tags.some((tag) => ADVANTAGE_TAGS.has(tag))) {
-    return { label: "AVANTAJLI", className: "bg-orange-600" }
+    return { label: t("badge.deal"), className: "bg-orange-600" }
   }
 
   if (tags.some((tag) => POPULAR_TAGS.has(tag))) {
-    return { label: "POPÜLER", className: "bg-orange-500" }
+    return { label: t("badge.popular"), className: "bg-orange-500" }
   }
 
   return null
@@ -257,6 +244,8 @@ export default function ProductOverview({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { addItem } = useKibisisCart()
+  const t = useT()
+  const money = useMoney()
   const [options, setOptions] = useState<Record<string, string>>({})
   const [activeImage, setActiveImage] = useState(0)
   const [seededId, setSeededId] = useState<string | null>(null)
@@ -328,8 +317,8 @@ export default function ProductOverview({
   }, [galleryKey])
   const price = variantPrice(selectedVariant) ?? cheapest(partial.length ? partial : (product.variants ?? []))
   const onSale = Boolean(price && price.original > price.price)
-  const badge = saleBadge(product, onSale)
-  const suffix = currencySuffix(price?.currency)
+  const badge = saleBadge(product, onSale, t)
+  const formatPrice = (amount: number) => money(amount, price?.currency)
   const rating = metaText(product.metadata, "rating")
   const reviewCount = metaText(product.metadata, "review_count")
   const sellerName = metaText(product.metadata, "seller_name")
@@ -380,7 +369,7 @@ export default function ProductOverview({
               <>
                 <button
                   type="button"
-                  aria-label="Önceki görsel"
+                  aria-label={t("product.previous_image")}
                   className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors"
                   onClick={() => stepImage(-1)}
                 >
@@ -388,7 +377,7 @@ export default function ProductOverview({
                 </button>
                 <button
                   type="button"
-                  aria-label="Sonraki görsel"
+                  aria-label={t("product.next_image")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors"
                   onClick={() => stepImage(1)}
                 >
@@ -438,10 +427,10 @@ export default function ProductOverview({
                   {rating} ★
                 </span>
               ) : null}
-              {reviewCount ? <span>{reviewCount} Değerlendirme</span> : null}
+              {reviewCount ? <span>{t("product.reviews", { count: reviewCount })}</span> : null}
               {sellerName ? (
                 <span>
-                  Satıcı: <strong className="text-slate-900">{sellerName}</strong>
+                  {t("common.seller")}: <strong className="text-slate-900">{sellerName}</strong>
                   {sellerScore ? ` (${sellerScore})` : ""}
                 </span>
               ) : null}
@@ -452,22 +441,25 @@ export default function ProductOverview({
             <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 space-y-2">
               <div className="flex flex-wrap items-baseline gap-3">
                 <span className="text-3xl font-black text-slate-950">
-                  {money(price.price)} {suffix}
+                  {formatPrice(price.price)}
                 </span>
                 {onSale ? (
                   <span className="text-sm font-semibold text-slate-400 line-through">
-                    {money(price.original)} {suffix}
+                    {formatPrice(price.original)}
                   </span>
                 ) : null}
                 {onSale ? (
                   <span className="bg-emerald-100 text-emerald-800 text-[11px] font-black px-2 py-0.5 rounded-full">
-                    Kazancınız {money(price.original - price.price)} {suffix}
+                    {t("product.you_save", { amount: formatPrice(price.original - price.price) })}
                   </span>
                 ) : null}
               </div>
               {installments >= 2 ? (
                 <div className="text-xs font-semibold text-indigo-700 bg-white p-2 rounded-xl border border-slate-200">
-                  Kartsız {installments} x {money(price.price / installments)} {suffix}
+                  {t("product.installments", {
+                    count: installments,
+                    amount: formatPrice(price.price / installments),
+                  })}
                 </div>
               ) : null}
             </div>
@@ -476,7 +468,7 @@ export default function ProductOverview({
           {grouped ? (
             <div className="space-y-2 text-xs">
               <div className="font-bold text-slate-800">
-                Renk: <span className="font-normal text-slate-600">{currentColor?.color}</span>
+                {t("product.color")}: <span className="font-normal text-slate-600">{currentColor?.color}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {colors.map((item) => {
@@ -487,7 +479,7 @@ export default function ProductOverview({
                       key={item.product_id}
                       href={`/products/${item.handle}`}
                       aria-current={selected ? "page" : undefined}
-                      title={item.in_stock ? item.color : `${item.color} (tükendi)`}
+                      title={item.in_stock ? item.color : `${item.color} (${t("product.sold_out")})`}
                       className={`p-1.5 rounded-xl flex flex-col items-center min-w-[65px] border-2 transition-colors ${
                         selected
                           ? "border-orange-600 bg-orange-50/50"
@@ -536,7 +528,7 @@ export default function ProductOverview({
               <div key={option.id} className="space-y-2 text-xs">
                 <div className="font-bold text-slate-800">
                   {option.title}:{" "}
-                  <span className="font-normal text-slate-600">{current ?? "Seçin"}</span>
+                  <span className="font-normal text-slate-600">{current ?? t("product.select")}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {values.map((value) => {
@@ -596,7 +588,11 @@ export default function ProductOverview({
             className="w-full py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-sm shadow-md transition-all"
             onClick={addToCart}
           >
-            {canAdd ? "Sepete ekle" : needsChoice ? "Seçenek seçin" : "Stokta yok"}
+            {canAdd
+              ? t("product.add_to_cart")
+              : needsChoice
+                ? t("product.select_option")
+                : t("product.out_of_stock")}
           </button>
 
           {buy ? <div className="kibi-product-slot space-y-4">{buy}</div> : null}
@@ -606,7 +602,7 @@ export default function ProductOverview({
           <div className="bg-white p-4 rounded-2xl border border-slate-200">
             <div className="font-bold text-slate-900 flex items-center gap-2">
               <ThemeIcon name="truck" className="h-4 w-4 text-orange-600" />
-              {FREE_SHIPPING_FROM} TL üzeri kargo bedava
+              {t("product.free_shipping_over", { amount: FREE_SHIPPING_FROM })}
             </div>
           </div>
 
@@ -617,8 +613,7 @@ export default function ProductOverview({
                 PREMIUM
               </div>
               <p className="font-bold mt-1">
-                Premium ile bu üründen anında {money(price.price * PREMIUM_RATE)} {suffix}{" "}
-                kazanın.
+                {t("product.premium", { amount: formatPrice(price.price * PREMIUM_RATE) })}
               </p>
             </div>
           ) : null}

@@ -1,25 +1,14 @@
-import { sdk } from "@lib/config"
 import { categoryTreeIds } from "@lib/data/categories"
 import { listCollections } from "@lib/data/collections"
-import { listProductsWithSort } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { OptionValueIds } from "@lib/util/product-option-filters"
 
-import ProductCard from "../home/product-card"
-import ListingControls, {
-  ListingBrand,
-  ListingChild,
-  ListingOption,
-} from "./listing-controls"
-import { toListingCard } from "./map-product"
-
-const PRODUCT_LIMIT = 12
-
-type FilterOptionResponse = {
-  product_options?: HttpTypes.StoreProductOption[]
-}
+import InfiniteProductGrid from "./infinite-grid"
+import ListingControls, { ListingBrand, ListingChild } from "./listing-controls"
+import { getKibiI18n } from "../i18n/server"
+import { loadListingPage, type ListingRequest } from "./load-page"
 
 function ancestors(category: HttpTypes.StoreProductCategory) {
   const chain: HttpTypes.StoreProductCategory[] = []
@@ -54,49 +43,6 @@ async function loadBrands(): Promise<ListingBrand[]> {
   }
 }
 
-async function loadOptions(): Promise<ListingOption[]> {
-  try {
-    const response = await sdk.client.fetch<FilterOptionResponse>(
-      "/store/product-options",
-      {
-        method: "GET",
-        query: {
-          is_exclusive: false,
-          fields: "*values",
-          limit: 50,
-        },
-        cache: "force-cache",
-      }
-    )
-
-    return (response.product_options ?? []).flatMap((option) => {
-      const values = (option.values ?? [])
-        .map((value) => ({
-          id: value.id,
-          label: value.value,
-        }))
-        .filter(
-          (value): value is { id: string; label: string } =>
-            Boolean(value.id && value.label)
-        )
-
-      if (!option.id || !values.length) {
-        return []
-      }
-
-      return [
-        {
-          id: option.id,
-          title: option.title || "Seçenek",
-          values,
-        },
-      ]
-    })
-  } catch {
-    return []
-  }
-}
-
 export default async function CategoryTemplate({
   category,
   sortBy,
@@ -114,8 +60,8 @@ export default async function CategoryTemplate({
   q?: string
   collectionIds?: string[]
 }) {
+  const { t } = await getKibiI18n()
   const pageNumber = pageNumberOf(page)
-  const sort = sortBy || "created_at"
   const trail = ancestors(category)
   const children: ListingChild[] = (category.category_children ?? [])
     .filter((child) => child.id && child.name && child.handle)
@@ -125,28 +71,19 @@ export default async function CategoryTemplate({
       handle: child.handle,
     }))
 
-  const [listed, brands, options] = await Promise.all([
-    listProductsWithSort({
-      page: pageNumber,
-      queryParams: {
-        limit: PRODUCT_LIMIT,
-        category_id: categoryTreeIds(category),
-        ...(collectionIds.length ? { collection_id: collectionIds } : {}),
-        ...(q ? { q } : {}),
-      },
-      sortBy: sort,
-      countryCode,
-      optionValueIds,
-    }),
-    loadBrands(),
-    loadOptions(),
-  ])
+  const request: ListingRequest = {
+    countryCode,
+    categoryIds: categoryTreeIds(category),
+    collectionIds,
+    optionValueIds: optionValueIds ?? [],
+    ...(q ? { q } : {}),
+    ...(sortBy ? { sortBy } : {}),
+  }
 
-  const cards = listed.response.products.flatMap((product) => {
-    const card = toListingCard(product)
-    return card ? [card] : []
-  })
-  const totalPages = Math.ceil(listed.response.count / PRODUCT_LIMIT)
+  const [listed, brands] = await Promise.all([
+    loadListingPage(request, pageNumber),
+    loadBrands(),
+  ])
 
   return (
     <main
@@ -156,7 +93,7 @@ export default async function CategoryTemplate({
       <section className="py-2 border-b border-slate-200">
         <div className="flex items-center gap-1.5 text-[11px] text-slate-500 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <LocalizedClientLink href="/" className="hover:text-orange-600">
-            Ana Sayfa
+            {t("common.home")}
           </LocalizedClientLink>
           {trail.map((crumb) => (
             <span key={crumb.id} className="flex items-center gap-1.5">
@@ -176,13 +113,11 @@ export default async function CategoryTemplate({
 
       <ListingControls
         title={category.name}
-        count={listed.response.count}
+        count={listed.count}
         description={category.description}
         childrenCategories={children}
         brands={brands}
-        options={options}
-        page={pageNumber}
-        totalPages={totalPages}
+        options={listed.options}
         query={{
           q,
           sortBy: sortBy,
@@ -191,22 +126,13 @@ export default async function CategoryTemplate({
           optionValueIds: optionValueIds ?? [],
         }}
       >
-        {cards.length ? (
-          <ul
-            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3"
-            data-testid="products-list"
-          >
-            {cards.map((product) => (
-              <li key={product.id}>
-                <ProductCard product={product} layout="grid" />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-slate-500">
-            Bu filtrelere uygun ürün bulunamadı.
-          </div>
-        )}
+        <InfiniteProductGrid
+          key={JSON.stringify(request)}
+          request={request}
+          initialPage={pageNumber}
+          initialCards={listed.cards}
+          totalPages={listed.totalPages}
+        />
       </ListingControls>
     </main>
   )

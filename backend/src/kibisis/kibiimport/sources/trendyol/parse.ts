@@ -19,6 +19,53 @@ export function sharedProps(html: string): Record<string, unknown> {
   return decoded as Record<string, unknown>
 }
 
+/**
+ * ColorLinks reads the other colors of a product from the ProductGroup
+ * structured data. Trendyol lists every sibling color there with its own link
+ * and leaves the current product out.
+ */
+export function colorLinks(html: string): string[] {
+  const links: string[] = []
+  const blocks = html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)
+
+  for (const block of blocks) {
+    let decoded: unknown
+
+    try {
+      decoded = JSON.parse(block[1] ?? "")
+    } catch {
+      continue
+    }
+
+    const group = asRecord(decoded)
+
+    if (group?.["@type"] !== "ProductGroup") {
+      continue
+    }
+
+    for (const variant of Array.isArray(group.hasVariant) ? group.hasVariant : []) {
+      const record = asRecord(variant)
+      const offers = Array.isArray(record?.offers) ? record?.offers : [record?.offers]
+      const urls = [record?.url, ...offers.map((offer) => asRecord(offer)?.url)]
+      const url = urls.find((value): value is string => typeof value === "string" && value !== "")
+
+      if (url && !links.includes(url)) {
+        links.push(url)
+      }
+    }
+  }
+
+  return links
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  return value as Record<string, unknown>
+}
+
 export function jsonObject(html: string, start: number): string {
   let depth = 0
   let inString = false

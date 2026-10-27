@@ -1,21 +1,32 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 
-import { ImportException } from "./errors"
+import { HttpStatusException, ImportException } from "./errors"
 import { importProduct, renderResult } from "./importer"
 import { KIBIIMPORT_MODULE } from "./index"
 import { categoryPaths } from "./lib/categories"
 import { splitProductUrls } from "./lib/urls"
 import { SourceRegistry } from "./registry"
-import KibiimportModuleService from "./service"
-import { CategoryOption, ImportJobDTO, ImportSummary } from "./types"
+import KibiimportModuleService, { locationIdsOf } from "./service"
+import {
+  CategoryOption,
+  CurrencyOption,
+  ImportJobDTO,
+  ImportSummary,
+  LocationOption,
+} from "./types"
 
 const STALE_MS = 10 * 60 * 1000
+const JOB_GAP_MS = 1000
+const HTTP_FAILURE_GAP_MS = 2000
 
 type JobClaim = {
   id: string
   url: string
   category_id: string
+  location_ids: unknown
+  currency_code: string | null
+  parent_id: string | null
 }
 
 type Query = {
@@ -41,16 +52,25 @@ type Graph = {
     entity: string
     fields: string[]
   }) => Promise<{
-    data: { id?: string; name?: string; parent_category_id?: string | null; rank?: number | null }[]
+    data: {
+      id?: string
+      name?: string
+      parent_category_id?: string | null
+      rank?: number | null
+      supported_currencies?: { currency_code?: string; is_default?: boolean }[] | null
+    }[]
   }>
 }
 
 export async function queueAndDrain(
   container: MedusaContainer,
-  input: { urls: string; category_id: string }
+  input: { urls: string; category_id: string; location_ids?: string[]; currency_code?: string }
 ): Promise<{ jobs: ImportJobDTO[]; summary: ImportSummary }> {
   const service = container.resolve(KIBIIMPORT_MODULE) as KibiimportModuleService
+  const locationIds = locationIdsOf(input.location_ids ?? [])
   await assertCategory(container, input.category_id)
+  await assertLocations(container, locationIds)
+  const currencyCode = await resolveCurrency(container, input.currency_code)
 
   const urls = splitProductUrls(input.urls)
 
@@ -61,16 +81,9 @@ export async function queueAndDrain(
   const created: { id: string }[] = []
   const skipped: string[] = []
   const registry = new SourceRegistry()
-  const seen = new Set<string>()
+  const seen = await waitingKeys(service, registry)
 
   for (const url of urls) {
-    if (seen.has(url)) {
-      skipped.push(`${url} — Bu link zaten kuyrukta.`)
-      continue
-    }
-
-    seen.add(url)
-
     try {
       registry.match(url)
     } catch (error) {
@@ -78,15 +91,20 @@ export async function queueAndDrain(
       continue
     }
 
-    if (await service.isWaiting(url)) {
+    const key = registry.key(url)
+
+    if (seen.has(key)) {
       skipped.push(`${url} — Bu link zaten kuyrukta.`)
       continue
     }
 
+    seen.add(key)
     created.push(
       await service.createPending({
         url,
         category_id: input.category_id,
+        location_ids: locationIds,
+        currency_code: currencyCode,
       })
     )
   }
@@ -97,15 +115,18 @@ export async function queueAndDrain(
 
   await drain(container)
 
-  const fresh = await service.listRecent()
-  const createdIds = new Set(created.map((job) => job.id))
-  const finished = fresh.filter((job) => createdIds.has(job.id))
+  const createdIds = created.map((job) => job.id)
+  const [fresh, finished, colors] = await Promise.all([
+    service.listRecent(),
+    service.listByIds(createdIds),
+    service.listChildren(createdIds),
+  ])
   const jobs = await withCategories(container, service, fresh)
 
   return {
     jobs,
     summary: summarize(
-      finished.map((job) => service.toJob(job, null)),
+      [...finished, ...colors].map((job) => service.toJob(job, null)),
       skipped
     ),
   }
@@ -114,27 +135,48 @@ export async function queueAndDrain(
 export async function listImportPage(container: MedusaContainer): Promise<{
   jobs: ImportJobDTO[]
   categories: CategoryOption[]
+  locations: LocationOption[]
+  currencies: CurrencyOption[]
 }> {
   const service = container.resolve(KIBIIMPORT_MODULE) as KibiimportModuleService
-  const [jobs, categories] = await Promise.all([
+  const [jobs, categories, locations, currencies] = await Promise.all([
     withCategories(container, service, await service.listRecent()),
     listCategories(container),
+    listLocations(container),
+    listCurrencies(container),
   ])
 
-  return { jobs, categories }
+  return { jobs, categories, locations, currencies }
 }
 
+/**
+ * Drain runs pending jobs one after another and pauses between two jobs so
+ * the source shop receives at most one product request per second. While
+ * the source keeps answering with an unsuccessful HTTP status, every such
+ * failure in a row makes the next pause two seconds longer (2, 4, 6...).
+ */
 export async function drain(container: MedusaContainer): Promise<number> {
   let count = 0
+  let httpFailures = 0
 
-  while (await step(container)) {
+  while (true) {
+    const delayMs =
+      count === 0 ? 0 : httpFailures > 0 ? HTTP_FAILURE_GAP_MS * httpFailures : JOB_GAP_MS
+    const outcome = await step(container, delayMs)
+
+    if (!outcome) {
+      return count
+    }
+
     count += 1
+    httpFailures = outcome === "http_failed" ? httpFailures + 1 : 0
   }
-
-  return count
 }
 
-async function step(container: MedusaContainer): Promise<boolean> {
+async function step(
+  container: MedusaContainer,
+  delayMs: number
+): Promise<"completed" | "failed" | "http_failed" | null> {
   const database = container.resolve(ContainerRegistrationKeys.PG_CONNECTION) as Database
   const claim = await database.transaction(async (trx) => {
     const cutoff = new Date(Date.now() - STALE_MS)
@@ -187,27 +229,92 @@ async function step(container: MedusaContainer): Promise<boolean> {
   })
 
   if (!claim) {
-    return false
+    return null
   }
 
   const service = container.resolve(KIBIIMPORT_MODULE) as KibiimportModuleService
 
+  if (delayMs > 0) {
+    await wait(delayMs)
+  }
+
   try {
-    const result = await importProduct(container, claim.url, claim.category_id)
+    const result = await importProduct(
+      container,
+      claim.url,
+      claim.category_id,
+      locationIdsOf(claim.location_ids),
+      claim.currency_code
+    )
+    const colors = claim.parent_id ? null : await queueColors(service, claim, result.colorUrls)
     await service.finishJob(claim.id, {
       status: "completed",
-      result: renderResult(result),
+      result: colors ? `${renderResult(result)}\n${colors}` : renderResult(result),
       exitCode: 0,
     })
+    return "completed"
   } catch (error) {
     await service.finishJob(claim.id, {
       status: "failed",
       result: messageOf(error),
       exitCode: 1,
     })
+    return error instanceof HttpStatusException ? "http_failed" : "failed"
+  }
+}
+
+/**
+ * QueueColors adds the other colours of an imported product to the queue.
+ * Colour jobs carry their parent id and do not queue colours again, so a
+ * product group is walked once per link the user entered.
+ */
+async function queueColors(
+  service: KibiimportModuleService,
+  claim: JobClaim,
+  urls: string[]
+): Promise<string> {
+  if (!urls.length) {
+    return "Renk seçenekleri: başka renk yok."
   }
 
-  return true
+  try {
+    const registry = new SourceRegistry()
+    const seen = await waitingKeys(service, registry)
+    let queued = 0
+
+    for (const url of urls) {
+      const key = registry.key(url)
+
+      if (seen.has(key)) {
+        continue
+      }
+
+      seen.add(key)
+      await service.createPending({
+        url,
+        category_id: claim.category_id,
+        location_ids: locationIdsOf(claim.location_ids),
+        currency_code: claim.currency_code,
+        parent_id: claim.id,
+      })
+      queued += 1
+    }
+
+    const waiting = urls.length - queued
+
+    return waiting
+      ? `Renk seçenekleri: ${queued} link kuyruğa alındı, ${waiting} link zaten kuyrukta.`
+      : `Renk seçenekleri: ${queued} link kuyruğa alındı.`
+  } catch (error) {
+    return `Renk seçenekleri kuyruğa alınamadı: ${messageOf(error)}`
+  }
+}
+
+async function waitingKeys(
+  service: KibiimportModuleService,
+  registry: SourceRegistry
+): Promise<Set<string>> {
+  return new Set((await service.listWaiting()).map((job) => registry.key(job.url)))
 }
 
 async function assertCategory(container: MedusaContainer, categoryId: string): Promise<void> {
@@ -216,6 +323,71 @@ async function assertCategory(container: MedusaContainer, categoryId: string): P
   if (!categories.some((category) => category.id === categoryId)) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "Kategori bulunamadı.")
   }
+}
+
+async function assertLocations(container: MedusaContainer, locationIds: string[]): Promise<void> {
+  if (!locationIds.length) {
+    return
+  }
+
+  const known = new Set((await listLocations(container)).map((location) => location.id))
+
+  if (locationIds.some((id) => !known.has(id))) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "Stok lokasyonu bulunamadı.")
+  }
+}
+
+async function resolveCurrency(
+  container: MedusaContainer,
+  code: string | undefined
+): Promise<string> {
+  const currencies = await listCurrencies(container)
+  const chosen = code
+    ? currencies.find((currency) => currency.code === code.toLowerCase())
+    : currencies.find((currency) => currency.is_default) ?? currencies[0]
+
+  if (!chosen) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "Para birimi mağazada tanımlı değil.")
+  }
+
+  return chosen.code
+}
+
+async function listCurrencies(container: MedusaContainer): Promise<CurrencyOption[]> {
+  const query = container.resolve(ContainerRegistrationKeys.QUERY) as Graph
+  const { data } = await query.graph({
+    entity: "store",
+    fields: ["id", "supported_currencies.currency_code", "supported_currencies.is_default"],
+  })
+  const options = new Map<string, CurrencyOption>()
+
+  for (const currency of data.flatMap((store) => store.supported_currencies ?? [])) {
+    const code = currency?.currency_code?.toLowerCase()
+
+    if (code && !options.has(code)) {
+      options.set(code, { code, is_default: currency.is_default === true })
+    }
+  }
+
+  return [...options.values()].sort(
+    (left, right) => Number(right.is_default) - Number(left.is_default)
+  )
+}
+
+async function listLocations(container: MedusaContainer): Promise<LocationOption[]> {
+  const query = container.resolve(ContainerRegistrationKeys.QUERY) as Graph
+  const { data } = await query.graph({
+    entity: "stock_location",
+    fields: ["id", "name"],
+  })
+
+  return data
+    .flatMap((row) =>
+      typeof row.id === "string" && typeof row.name === "string" && row.name
+        ? [{ id: row.id, name: row.name }]
+        : []
+    )
+    .sort((left, right) => left.name.localeCompare(right.name, "tr"))
 }
 
 async function listCategories(container: MedusaContainer): Promise<CategoryOption[]> {
@@ -248,10 +420,16 @@ async function withCategories(
   service: KibiimportModuleService,
   rows: Awaited<ReturnType<KibiimportModuleService["listRecent"]>>
 ): Promise<ImportJobDTO[]> {
-  const categories = await listCategories(container)
+  const [categories, locations] = await Promise.all([
+    listCategories(container),
+    listLocations(container),
+  ])
   const names = new Map(categories.map((category) => [category.id, category.name]))
+  const locationNames = new Map(locations.map((location) => [location.id, location.name]))
 
-  return rows.map((row) => service.toJob(row, names.get(row.category_id) ?? null))
+  return rows.map((row) =>
+    service.toJob(row, names.get(row.category_id) ?? null, locationNames)
+  )
 }
 
 export function summarize(jobs: ImportJobDTO[], skipped: string[]): ImportSummary {
@@ -279,6 +457,10 @@ export function summarize(jobs: ImportJobDTO[], skipped: string[]): ImportSummar
   }
 
   return { completed, failed, queued, lines, skipped }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function messageOf(error: unknown): string {

@@ -14,6 +14,7 @@ export type ImportedVariant = {
   compareAtPrice: string | null
   attributes: ImportedAttribute[]
   sortOrder: number
+  inStock: boolean
 }
 
 export type ImportedProduct = {
@@ -29,6 +30,7 @@ export type ImportedProduct = {
   attributes: ImportedAttribute[]
   variants: ImportedVariant[]
   images: string[]
+  colorUrls: string[]
 }
 
 export type ImportResult = {
@@ -40,8 +42,17 @@ export type ImportResult = {
   updatedVariants: number
   removedVariants: number
   images: number
+  currency: string
   warnings: string[]
   category: string
+  stock: StockResult
+  colorUrls: string[]
+}
+
+export type StockResult = {
+  locations: string[]
+  stocked: number
+  soldOut: number
 }
 
 export type ImportJobDTO = {
@@ -49,6 +60,10 @@ export type ImportJobDTO = {
   url: string
   category_id: string
   category_name: string | null
+  location_ids: string[]
+  location_names: string[]
+  currency_code: string | null
+  parent_id: string | null
   status: ImportStatus
   result: string | null
   exit_code: number | null
@@ -60,6 +75,16 @@ export type ImportJobDTO = {
 export type CategoryOption = {
   id: string
   name: string
+}
+
+export type LocationOption = {
+  id: string
+  name: string
+}
+
+export type CurrencyOption = {
+  code: string
+  is_default: boolean
 }
 
 export type ImportSummary = {
@@ -76,6 +101,8 @@ export type ProductClient = {
 
 export type ProductAdapter = {
   adapt(url: string, payload: Record<string, unknown>): ImportedProduct
+  /** Two links with the same key open the same source product. */
+  productKey(url: string): string
 }
 
 export function isImportStatus(value: string): value is ImportStatus {

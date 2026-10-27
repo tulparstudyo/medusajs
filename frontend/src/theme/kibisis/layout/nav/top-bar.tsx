@@ -1,16 +1,42 @@
+import { getLocale } from "@lib/data/locale-actions"
+import { listLocales } from "@lib/data/locales"
 import { getNavigation, StoreNavItem } from "@lib/data/navigation"
+import { listRegions } from "@lib/data/regions"
+import { DEFAULT_LOCALE } from "@lib/util/default-locale"
 import { getContactSettings, storeName, telHref } from "@lib/data/site-settings"
 
 import MenuLink from "../menu-link"
+import CurrencySwitch, { CurrencyRegion } from "./currency-switch"
+import LanguageSwitch from "./language-switch"
+import { StickyTopBar } from "./scroll-chrome"
 
 const linkClass = "hover:text-white transition-colors"
 
 export default async function TopBar() {
-  const [navigation, contact] = await Promise.all([
-    getNavigation("top"),
-    getContactSettings(),
-  ])
-  if (navigation.items.length === 0 && !contact.phone) {
+  const [navigation, contact, locales, currentLocale, regions] =
+    await Promise.all([
+      getNavigation("top"),
+      getContactSettings(),
+      listLocales(),
+      getLocale(),
+      listRegions().catch(() => null),
+    ])
+  const hasLanguages = !!locales && locales.length > 1
+  const currencyRegions: CurrencyRegion[] = (regions ?? [])
+    .filter((region) => !!region.currency_code)
+    .map((region) => ({
+      currency: region.currency_code.toLowerCase(),
+      countries: (region.countries ?? [])
+        .map((country) => country.iso_2?.toLowerCase() ?? "")
+        .filter(Boolean),
+    }))
+  const hasCurrencies = currencyRegions.length > 0
+  if (
+    navigation.items.length === 0 &&
+    !contact.phone &&
+    !hasLanguages &&
+    !hasCurrencies
+  ) {
     return null
   }
 
@@ -18,7 +44,7 @@ export default async function TopBar() {
   const endItems = navigation.items.filter((item) => item.align === "end")
 
   return (
-    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-300 text-xs py-2 px-4 border-b border-slate-700/50">
+    <StickyTopBar>
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-4 text-[11px] font-medium">
           <span className="inline-flex items-center gap-1.5 text-amber-400 font-semibold">
@@ -42,9 +68,22 @@ export default async function TopBar() {
               {contact.phone}
             </a>
           )}
+          {hasLanguages && (
+            <LanguageSwitch
+              locales={locales}
+              current={currentLocale}
+              fallback={DEFAULT_LOCALE}
+            />
+          )}
+          {hasCurrencies && (
+            <CurrencySwitch
+              regions={currencyRegions}
+              locale={currentLocale ?? DEFAULT_LOCALE}
+            />
+          )}
         </div>
       </div>
-    </div>
+    </StickyTopBar>
   )
 }
 

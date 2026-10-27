@@ -5,12 +5,14 @@ import {
   APP_LINK_LABELS,
   APP_LINKS,
   carrierField,
+  GOOGLE_AUTH_MODES,
   PAYMENT_MODES,
   PAYMENT_PROVIDERS,
   SettingsKey,
   SMTP_SECURITY,
   SOCIAL_LINK_LABELS,
   SOCIAL_LINKS,
+  TRANSLATE_PROVIDERS,
 } from "./types"
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -163,6 +165,43 @@ export const SmtpSettingsSchema = z
     }
   })
 
+function isServiceAccountJson(value: string) {
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>
+    return (
+      parsed?.type === "service_account" &&
+      typeof parsed.client_email === "string" &&
+      typeof parsed.private_key === "string"
+    )
+  } catch {
+    return false
+  }
+}
+
+export const TranslateSettingsSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    provider: z.enum(TRANSLATE_PROVIDERS, { message: "Bu çeviri hizmeti henüz desteklenmiyor." }).default("google"),
+    google_auth: z.enum(GOOGLE_AUTH_MODES).default("api_key"),
+    google_api_key: secret,
+    google_service_account: z
+      .string()
+      .trim()
+      .max(10_000, "Hizmet hesabı anahtarı çok uzun.")
+      .refine(
+        (value) => value === "" || isServiceAccountJson(value),
+        "Hizmet hesabı anahtarı, Google Cloud'dan indirilen JSON dosyasının içeriği olmalı."
+      )
+      .nullable()
+      .optional(),
+    gemini_api_key: secret,
+    gemini_model: text(80).refine(
+      (value) => value === "" || /^[a-z0-9][a-z0-9.\-]*$/.test(value),
+      "Model adı küçük harf, rakam, nokta ve tireden oluşmalı (ör. gemini-flash-latest)."
+    ),
+  })
+  .strict()
+
 export const SETTINGS_SCHEMAS = {
   store: StoreSettingsSchema,
   social: SocialSettingsSchema,
@@ -170,4 +209,5 @@ export const SETTINGS_SCHEMAS = {
   shipping: ShippingSettingsSchema,
   carriers: carrierSettingsSchema,
   smtp: SmtpSettingsSchema,
+  translate: TranslateSettingsSchema,
 } satisfies Record<SettingsKey, z.ZodType | (() => z.ZodType)>

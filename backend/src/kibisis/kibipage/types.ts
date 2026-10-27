@@ -299,6 +299,57 @@ export const emptyHeroCard = (): HeroCard => ({
 
 export type SectionSettings = Record<string, unknown>
 
+export type TranslationSpec = {
+  fields: string[]
+  lists: Record<string, string[]>
+  groups: Record<string, string[]>
+}
+
+const HERO_CARD_FIELDS = ["eyebrow", "title", "text", "action"]
+
+export const SECTION_TRANSLATABLE: Record<SectionType, TranslationSpec> = {
+  "quick-categories": { fields: [], lists: { items: ["title", "label"] }, groups: {} },
+  "hero-showcase": {
+    fields: [],
+    lists: {},
+    groups: { primary: HERO_CARD_FIELDS, secondary: HERO_CARD_FIELDS },
+  },
+  "selected-product": { fields: ["title"], lists: {}, groups: {} },
+  "promo-banner": {
+    fields: [],
+    lists: { items: ["eyebrow", "title", "text", "action"] },
+    groups: {},
+  },
+  "fast-links": { fields: ["title"], lists: { items: ["label"] }, groups: {} },
+  "icon-box": { fields: [], lists: { items: ["title", "text"] }, groups: {} },
+}
+
+export const TRANSLATION_FIELD_LABELS: Record<string, string> = {
+  eyebrow: "Üst yazı",
+  title: "Başlık",
+  text: "Açıklama",
+  action: "Bağlantı yazısı",
+  label: "Etiket",
+}
+
+export const TRANSLATION_GROUP_LABELS: Record<string, string> = {
+  primary: "Birinci kart",
+  secondary: "İkinci kart",
+}
+
+export type TranslationLayer = {
+  fields?: Record<string, string>
+  lists?: Record<string, Record<string, Record<string, string>>>
+  groups?: Record<string, Record<string, string>>
+}
+
+export type SectionTranslations = Record<string, TranslationLayer>
+
+export type ContentLocale = {
+  code: string
+  name: string
+}
+
 export type PageDTO = {
   id: string
   key: PageKey

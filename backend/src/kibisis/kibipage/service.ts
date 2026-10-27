@@ -2,6 +2,7 @@ import { MedusaError, MedusaService } from "@medusajs/framework/utils"
 
 import { readSettings, serializeSection } from "./lib/serialize"
 import { defaultSettings } from "./lib/settings"
+import { localizeSettings } from "./lib/translations"
 import PageRecord from "./models/page-record"
 import PageSection from "./models/section"
 import {
@@ -75,7 +76,7 @@ class KibipageModuleService extends MedusaService({
     return sections.map((section) => serializeSection(section, pageKey))
   }
 
-  async listPublicSections(pageKey: PageKey): Promise<PublicSectionDTO[]> {
+  async listPublicSections(pageKey: PageKey, locale?: string): Promise<PublicSectionDTO[]> {
     const page = await this.ensurePage(pageKey)
     const sections = await this.listAllSections(page.id)
     return sections
@@ -84,7 +85,7 @@ class KibipageModuleService extends MedusaService({
         id: section.id,
         type: section.type,
         position: section.position,
-        settings: readSettings(section.settings),
+        settings: localizeSettings(readSettings(section.settings), locale),
       }))
   }
 
@@ -250,85 +251,10 @@ class KibipageModuleService extends MedusaService({
                 title: "En Avantajlı Ürünler",
               }
             : brandLinks
-              ? {
-                  title: "Trend Markalar",
-                  variant: "outline",
-                  items: [
-                    "Victoria Secret",
-                    "Bellona",
-                    "Mango",
-                    "Tommy Hilfiger",
-                    "Madame Coco",
-                    "The North Face",
-                    "Swarovski",
-                    "Harem Altın",
-                    "Dyson",
-                    "Apple",
-                    "Samsung",
-                  ].map((label, index) => ({
-                    id: `brand-${index + 1}`,
-                    label,
-                    href: "/",
-                    icon: "",
-                    accent: false,
-                  })),
-                }
+              ? { ...defaultSettings(type), title: "Trend Markalar", variant: "outline" }
               : searchLinks
-                ? {
-                    title: "Popüler Aramalar Bu Hafta",
-                    variant: "pill",
-                    items: [
-                      "Kuzine Soba",
-                      "Elektronik Sigara Likit",
-                      "Webasto Isıtıcı",
-                      "Kindle",
-                      "Zeytin Sıkma Makinası",
-                      "Serve Deep Kalem",
-                      "Yds Bot",
-                      "Robot Süpürge",
-                      "Tümünü Gör",
-                    ].map((label, index, labels) => ({
-                      id: `search-${index + 1}`,
-                      label,
-                      href: "/",
-                      icon: "",
-                      accent: index === labels.length - 1,
-                    })),
-                  }
-                : iconBoxes
-                  ? {
-                      items: [
-                        {
-                          id: "box-1",
-                          icon: "truck",
-                          title: "Yarın Kapında",
-                          text: "Tüm illerde siparişlerinize ertesi gün hızlı teslimat.",
-                          tone: "orange",
-                        },
-                        {
-                          id: "box-2",
-                          icon: "lock-closed",
-                          title: "Tek Tıkla Güvenli",
-                          text: "256-bit SSL ve 3D Secure ile korunan ödemeler.",
-                          tone: "blue",
-                        },
-                        {
-                          id: "box-3",
-                          icon: "device-phone-mobile",
-                          title: "Mobil Cebinde",
-                          text: "Uygulamaya özel anlık indirim ve kupon fırsatları.",
-                          tone: "emerald",
-                        },
-                        {
-                          id: "box-4",
-                          icon: "archive-box",
-                          title: "Kapında Kolay İade",
-                          text: "Kurye kapınızdan alsın, zahmetsizce iade edin.",
-                          tone: "purple",
-                        },
-                      ],
-                    }
-                  : defaultSettings(type)
+                ? { ...defaultSettings(type), title: "Popüler Aramalar Bu Hafta", variant: "pill" }
+                : defaultSettings(type)
 
         return {
           page_id: pageId,

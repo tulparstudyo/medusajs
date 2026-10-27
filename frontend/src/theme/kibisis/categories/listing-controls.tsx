@@ -12,6 +12,9 @@ import {
   SORT_QUERY_KEY,
 } from "@lib/util/listing-params"
 
+import type { MessageKey } from "../i18n"
+import { useT } from "../i18n/client"
+
 export type ListingBrand = {
   id: string
   title: string
@@ -29,10 +32,10 @@ export type ListingChild = {
   handle: string
 }
 
-const SORT_OPTIONS: { value: ListingSort; label: string }[] = [
-  { value: "created_at", label: "Önerilen sıralama" },
-  { value: "price_asc", label: "En düşük fiyat" },
-  { value: "price_desc", label: "En yüksek fiyat" },
+const SORT_OPTIONS: { value: ListingSort; label: MessageKey }[] = [
+  { value: "created_at", label: "listing.recommended" },
+  { value: "price_asc", label: "listing.lowest_price" },
+  { value: "price_desc", label: "listing.highest_price" },
 ]
 
 export type ListingQueryState = {
@@ -51,8 +54,6 @@ export default function ListingControls({
   brands,
   options,
   query,
-  page,
-  totalPages,
   children,
 }: {
   title: string
@@ -62,10 +63,9 @@ export default function ListingControls({
   brands: ListingBrand[]
   options: ListingOption[]
   query: ListingQueryState
-  page: number
-  totalPages: number
   children: ReactNode
 }) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -78,7 +78,9 @@ export default function ListingControls({
       if (query.sortBy && query.sortBy !== "created_at") {
         params.set(SORT_QUERY_KEY, query.sortBy)
       }
-      query.collectionIds.forEach((id) => params.append(COLLECTION_QUERY_KEY, id))
+      query.collectionIds.forEach((id) =>
+        params.append(COLLECTION_QUERY_KEY, id)
+      )
       query.optionValueIds.forEach((id) =>
         params.append(OPTION_VALUE_QUERY_KEY, id)
       )
@@ -150,7 +152,9 @@ export default function ListingControls({
           >
             {title}{" "}
             <span className="text-xs text-slate-400 font-semibold">
-              ({count.toLocaleString("tr-TR")} ürün)
+              {t("listing.products_count", {
+                count: count.toLocaleString("en-US"),
+              })}
             </span>
           </h1>
           {description ? (
@@ -171,10 +175,14 @@ export default function ListingControls({
           ) : null}
         </div>
         <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold shrink-0">
-          <span>⇅ Sıralama:</span>
+          <span>⇅ {t("listing.sort_by")}</span>
           <select
             className="bg-transparent text-slate-800 font-semibold focus:outline-none"
-            value={SORT_OPTIONS.some((item) => item.value === sortBy) ? sortBy : "created_at"}
+            value={
+              SORT_OPTIONS.some((item) => item.value === sortBy)
+                ? sortBy
+                : "created_at"
+            }
             onChange={(event) => {
               const value = event.target.value
               commit((params) => {
@@ -188,7 +196,7 @@ export default function ListingControls({
           >
             {SORT_OPTIONS.map((item) => (
               <option key={item.value} value={item.value}>
-                {item.label}
+                {t(item.label)}
               </option>
             ))}
           </select>
@@ -197,7 +205,9 @@ export default function ListingControls({
 
       {brands.length > 0 ? (
         <section className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <span className="text-xs font-bold text-slate-800 shrink-0">Marka:</span>
+          <span className="text-xs font-bold text-slate-800 shrink-0">
+            {t("listing.brand")}:
+          </span>
           {brands.map((brand) => {
             const selected = selectedBrands.includes(brand.id)
             return (
@@ -225,14 +235,16 @@ export default function ListingControls({
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <aside className="w-full lg:w-64 bg-white rounded-2xl p-4 border border-slate-200 space-y-4 text-xs lg:sticky lg:top-24">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <span className="font-bold text-sm text-slate-900">Filtreler</span>
+            <span className="font-bold text-sm text-slate-900">
+              {t("listing.filters")}
+            </span>
             {hasFilters ? (
               <button
                 type="button"
                 className="font-semibold text-orange-600"
                 onClick={() => router.push(pathname, { scroll: false })}
               >
-                Temizle
+                {t("listing.clear")}
               </button>
             ) : null}
           </div>
@@ -242,20 +254,20 @@ export default function ListingControls({
               key={searchValue}
               name={SEARCH_QUERY_KEY}
               defaultValue={searchValue}
-              placeholder="Ürün ara"
+              placeholder={t("listing.search_placeholder")}
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-orange-500"
             />
             <button
               type="submit"
               className="shrink-0 rounded-xl bg-orange-600 px-3 py-2 font-bold text-white"
             >
-              Ara
+              {t("common.search")}
             </button>
           </form>
 
           {brands.length > 0 ? (
             <div className="space-y-1.5">
-              <span className="font-bold block">Marka</span>
+              <span className="font-bold block">{t("listing.brand")}</span>
               <div className="max-h-48 space-y-1.5 overflow-y-auto">
                 {brands.map((brand) => (
                   <label key={brand.id} className="flex items-center gap-2">
@@ -264,7 +276,11 @@ export default function ListingControls({
                       className="accent-orange-600"
                       checked={selectedBrands.includes(brand.id)}
                       onChange={() =>
-                        toggleValue(COLLECTION_QUERY_KEY, brand.id, selectedBrands)
+                        toggleValue(
+                          COLLECTION_QUERY_KEY,
+                          brand.id,
+                          selectedBrands
+                        )
                       }
                     />
                     {brand.title}
@@ -286,7 +302,11 @@ export default function ListingControls({
                       type="button"
                       aria-pressed={selected}
                       onClick={() =>
-                        toggleValue(OPTION_VALUE_QUERY_KEY, value.id, selectedOptions)
+                        toggleValue(
+                          OPTION_VALUE_QUERY_KEY,
+                          value.id,
+                          selectedOptions
+                        )
                       }
                       className={`rounded-xl border px-2.5 py-1 font-semibold ${
                         selected
@@ -305,35 +325,6 @@ export default function ListingControls({
 
         <section className="flex-1 w-full min-w-0 space-y-4">
           {children}
-          {totalPages > 1 ? (
-            <div className="flex justify-center gap-2" data-testid="product-pagination">
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                (item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    disabled={item === page}
-                    onClick={() =>
-                      commit((params) => {
-                        if (item === 1) {
-                          params.delete("page")
-                        } else {
-                          params.set("page", String(item))
-                        }
-                      }, false)
-                    }
-                    className={`min-w-8 rounded-lg border px-2 py-1 text-xs font-bold ${
-                      item === page
-                        ? "border-orange-600 bg-orange-600 text-white"
-                        : "border-slate-200 bg-white text-slate-700"
-                    }`}
-                  >
-                    {item}
-                  </button>
-                )
-              )}
-            </div>
-          ) : null}
         </section>
       </div>
     </div>

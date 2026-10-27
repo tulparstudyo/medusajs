@@ -2,6 +2,7 @@ import { Button, Container, Heading, Prompt, Select, Text, toast } from "@medusa
 import { useCallback, useEffect, useState } from "react"
 
 import { api } from "./api"
+import PageTranslate from "./page-translate"
 import SectionForm, { SectionFormValues } from "./section-form"
 import SectionList from "./section-list"
 import { PageDTO, PageKey, SECTION_LABELS, SECTION_TYPES, SectionDTO, SectionType } from "../types"
@@ -155,16 +156,23 @@ export default function PagesScreen() {
           </Text>
         </div>
         {currentPage && (
-          <Button
-            size="small"
-            variant="secondary"
-            onClick={() => {
-              setPageKey(null)
-              void loadPages()
-            }}
-          >
-            Sayfalara dön
-          </Button>
+          <div className="flex items-center gap-x-2">
+            <PageTranslate
+              sections={sections}
+              disabled={saving || loading}
+              onTranslated={() => void loadSections(currentPage.key)}
+            />
+            <Button
+              size="small"
+              variant="secondary"
+              onClick={() => {
+                setPageKey(null)
+                void loadPages()
+              }}
+            >
+              Sayfalara dön
+            </Button>
+          </div>
         )}
       </div>
       <div className="px-6 py-4">

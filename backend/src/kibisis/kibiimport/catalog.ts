@@ -1,5 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import {
+  batchInventoryItemLevelsWorkflow,
   createProductVariantsWorkflow,
   createProductsWorkflow,
   deleteProductVariantsWorkflow,
@@ -13,12 +14,15 @@ import { ContainerRegistrationKeys, ProductStatus } from "@medusajs/framework/ut
 
 import { KIBIGROUP_MODULE } from "../kibigroup"
 import KibigroupModuleService from "../kibigroup/service"
-import { ImportException } from "./errors"
+import { HttpStatusException, ImportException } from "./errors"
 import { slugify } from "./lib/slug"
 import { compareMoney } from "./money"
+import { mergePrices, PriceInput, PriceRow, pricesFor } from "./prices"
 import { remoteGet } from "./remote-get"
 import KibiimportModuleService from "./service"
-import { ImportedProduct, ImportedVariant, ImportResult } from "./types"
+import { ImportedProduct, ImportedVariant, ImportResult, StockResult } from "./types"
+
+export const IMPORT_STOCK = 3
 
 type Graph = {
   graph: (args: {
@@ -30,6 +34,7 @@ type Graph = {
 
 type StoreContext = {
   currencyCodes: string[]
+  defaultCurrency: string
   salesChannelIds: string[]
   shippingProfileId: string
   categoryName: string
@@ -45,6 +50,7 @@ type VariantRow = {
   id: string
   barcode: string | null
   metadata: Record<string, unknown> | null
+  prices: PriceRow[]
 }
 
 type ProductRow = {
@@ -55,6 +61,11 @@ type ProductRow = {
   variants: VariantRow[]
 }
 
+type WrittenCatalog = Omit<
+  ImportResult,
+  "currency" | "warnings" | "category" | "images" | "stock" | "colorUrls"
+>
+
 type DownloadedImage = {
   bytes: Buffer
   mediaType: string
@@ -64,7 +75,9 @@ export async function writeProduct(
   container: MedusaContainer,
   service: KibiimportModuleService,
   product: ImportedProduct,
-  categoryId: string
+  categoryId: string,
+  locationIds: string[] = [],
+  currencyCode: string | null = null
 ): Promise<ImportResult> {
   const color = product.color?.trim() ?? ""
 
@@ -73,7 +86,8 @@ export async function writeProduct(
   }
 
   const context = await loadContext(container, categoryId)
-  const warnings = currencyWarnings(product.currency, context.currencyCodes)
+  const currency = pickCurrency(context, currencyCode)
+  const warnings = currencyWarnings(product.currency, currency)
   const downloaded = await downloadImages(product.images)
   const imageUrls = await uploadImages(container, product.code, downloaded)
   const existingId = await findExistingProduct(container, service, product, color)
@@ -84,8 +98,8 @@ export async function writeProduct(
   }
 
   const written = existing
-    ? await updateCatalog(container, product, color, categoryId, context, existing, imageUrls)
-    : await createCatalog(container, product, color, categoryId, context, imageUrls)
+    ? await updateCatalog(container, product, color, categoryId, currency, existing, imageUrls)
+    : await createCatalog(container, product, color, categoryId, context, currency, imageUrls)
 
   await service.rememberProduct({
     source: product.source,
@@ -97,12 +111,144 @@ export async function writeProduct(
     .resolve<KibigroupModuleService>(KIBIGROUP_MODULE)
     .rememberImported(written.productId, product.code, color)
 
+  const stock = await stockVariants(container, product, written.productId, locationIds)
+
   return {
     ...written,
+    currency,
     warnings,
     category: context.categoryName,
     images: imageUrls.length,
+    stock,
+    colorUrls: product.colorUrls,
   }
+}
+
+/**
+ * StockVariants links every variant to the chosen locations. A variant the
+ * source still sells is raised to IMPORT_STOCK units. A sold out variant gets
+ * a level with zero units and an existing level keeps its quantity.
+ */
+async function stockVariants(
+  container: MedusaContainer,
+  product: ImportedProduct,
+  productId: string,
+  locationIds: string[]
+): Promise<StockResult> {
+  if (!locationIds.length) {
+    return { locations: [], stocked: 0, soldOut: 0 }
+  }
+
+  const query = graph(container)
+  const [locations, variants] = await Promise.all([
+    query.graph({
+      entity: "stock_location",
+      fields: ["id", "name"],
+      filters: { id: locationIds },
+    }),
+    query.graph({
+      entity: "product_variant",
+      fields: [
+        "id",
+        "barcode",
+        "inventory_items.inventory_item_id",
+        "inventory_items.inventory.location_levels.id",
+        "inventory_items.inventory.location_levels.location_id",
+        "inventory_items.inventory.location_levels.stocked_quantity",
+      ],
+      filters: { product_id: productId },
+    }),
+  ])
+  const inStock = new Map(product.variants.map((variant) => [variant.barcode, variant.inStock]))
+  const create: { inventory_item_id: string; location_id: string; stocked_quantity: number }[] = []
+  const update: {
+    id: string
+    inventory_item_id: string
+    location_id: string
+    stocked_quantity: number
+  }[] = []
+  let stocked = 0
+  let soldOut = 0
+
+  for (const variant of variants.data) {
+    const barcode = typeof variant.barcode === "string" ? variant.barcode : ""
+    const items = asArray(variant.inventory_items).flatMap((link) => {
+      const record = asRecord(link)
+      const itemId = record?.inventory_item_id
+      return typeof itemId === "string" ? [{ itemId, levels: levelsOf(record?.inventory) }] : []
+    })
+
+    if (!inStock.has(barcode) || !items.length) {
+      continue
+    }
+
+    const available = inStock.get(barcode) === true
+
+    if (available) {
+      stocked += 1
+    } else {
+      soldOut += 1
+    }
+
+    for (const item of items) {
+      for (const locationId of locationIds) {
+        const level = item.levels.find((row) => row.locationId === locationId)
+
+        if (!level) {
+          create.push({
+            inventory_item_id: item.itemId,
+            location_id: locationId,
+            stocked_quantity: available ? IMPORT_STOCK : 0,
+          })
+          continue
+        }
+
+        if (available && level.stockedQuantity < IMPORT_STOCK) {
+          update.push({
+            id: level.id,
+            inventory_item_id: item.itemId,
+            location_id: locationId,
+            stocked_quantity: IMPORT_STOCK,
+          })
+        }
+      }
+    }
+  }
+
+  if (create.length || update.length) {
+    await batchInventoryItemLevelsWorkflow(container).run({
+      input: { create, update },
+    })
+  }
+
+  const names = new Map(
+    locations.data.flatMap((row): [string, string][] =>
+      typeof row.id === "string" && typeof row.name === "string" ? [[row.id, row.name]] : []
+    )
+  )
+
+  return {
+    locations: locationIds.map((id) => names.get(id) ?? id),
+    stocked,
+    soldOut,
+  }
+}
+
+function levelsOf(
+  inventory: unknown
+): { id: string; locationId: string; stockedQuantity: number }[] {
+  return asArray(asRecord(inventory)?.location_levels).flatMap((level) => {
+    const record = asRecord(level)
+    const id = record?.id
+    const locationId = record?.location_id
+    const quantity = Number(record?.stocked_quantity ?? 0)
+
+    if (typeof id !== "string" || typeof locationId !== "string") {
+      return []
+    }
+
+    return [{ id, locationId, stockedQuantity: Number.isFinite(quantity) ? quantity : 0 }]
+  })
 }
 
 async function loadContext(container: MedusaContainer, categoryId: string): Promise<StoreContext> {
@@ -123,7 +269,7 @@ async function loadContext(container: MedusaContainer, categoryId: string): Prom
     }),
     query.graph({
       entity: "store",
-      fields: ["id", "supported_currencies.currency_code"],
+      fields: ["id", "supported_currencies.currency_code", "supported_currencies.is_default"],
     }),
   ])
 
@@ -143,25 +289,16 @@ async function loadContext(container: MedusaContainer, categoryId: string): Prom
     throw new ImportException("Satış kanalı veya gönderim profili bulunamadı.")
   }
 
-  const currencyCodes = unique(
-    stores.data.flatMap((store) => {
-      const currencies = store.supported_currencies
-      if (!Array.isArray(currencies)) {
-        return []
-      }
-
-      return currencies
-        .map((currency) => {
-          if (!currency || typeof currency !== "object") {
-            return ""
-          }
-
-          const code = (currency as { currency_code?: unknown }).currency_code
-          return typeof code === "string" ? code.toLowerCase() : ""
-        })
-        .filter((code) => code !== "")
+  const currencies = stores.data.flatMap((store) =>
+    asArray(store.supported_currencies).flatMap((currency) => {
+      const record = asRecord(currency)
+      const code = record?.currency_code
+      return typeof code === "string" && code
+        ? [{ code: code.toLowerCase(), isDefault: record?.is_default === true }]
+        : []
     })
   )
+  const currencyCodes = unique(currencies.map((currency) => currency.code))
 
   if (!currencyCodes.length) {
     throw new ImportException("Mağaza para birimi bulunamadı.")
@@ -169,6 +306,8 @@ async function loadContext(container: MedusaContainer, categoryId: string): Prom
 
   return {
     currencyCodes,
+    defaultCurrency:
+      currencies.find((currency) => currency.isDefault)?.code ?? currencyCodes[0],
     salesChannelIds,
     shippingProfileId,
     categoryName,
@@ -255,8 +394,9 @@ async function createCatalog(
   color: string,
   categoryId: string,
   context: StoreContext,
+  currency: string,
   imageUrls: string[]
-): Promise<Omit<ImportResult, "warnings" | "category" | "images">> {
+): Promise<WrittenCatalog> {
   const axis = axisName(product)
   const handle = await availableHandle(container, product, color)
   const { result } = await createProductsWorkflow(container).run({
@@ -276,7 +416,7 @@ async function createCatalog(
           metadata: metadataOf(product, color),
           options: [{ title: axis, values: optionValues(product, axis) }],
           variants: product.variants.map((variant) =>
-            variantInput(product, variant, axis, context.currencyCodes)
+            variantInput(product, variant, axis, pricesFor(variant.price, currency))
           ),
         },
       ],
@@ -305,11 +445,11 @@ async function updateCatalog(
   product: ImportedProduct,
   color: string,
   categoryId: string,
-  context: StoreContext,
+  currency: string,
   existing: ProductRow,
   imageUrls: string[]
-): Promise<Omit<ImportResult, "warnings" | "category" | "images">> {
-  const counts = await syncVariants(container, product, existing, context.currencyCodes)
+): Promise<WrittenCatalog> {
+  const counts = await syncVariants(container, product, existing, currency)
 
   await updateProductsWorkflow(container).run({
     input: {
@@ -344,7 +484,7 @@ async function syncVariants(
   container: MedusaContainer,
   product: ImportedProduct,
   existing: ProductRow,
-  currencyCodes: string[]
+  currency: string
 ): Promise<{ createdVariants: number; updatedVariants: number; removedVariants: number }> {
   if (existing.options.length !== 1) {
     throw new ImportException("Ürünün varyant seçeneği içe aktarmayla güncellenemiyor.")
@@ -377,15 +517,16 @@ async function syncVariants(
 
   for (const variant of product.variants) {
     const current = byBarcode.get(variant.barcode)
-    const next = variantInput(product, variant, axis, currencyCodes, current?.metadata)
 
     if (!current) {
+      const next = variantInput(product, variant, axis, pricesFor(variant.price, currency))
       creating.push({ ...next, product_id: existing.id, manage_inventory: true })
       continue
     }
 
     kept.add(current.id)
-    updating.push({ id: current.id, ...next })
+    const prices = mergePrices(current.prices, variant.price, currency)
+    updating.push({ id: current.id, ...variantInput(product, variant, axis, prices, current.metadata) })
   }
 
   if (creating.length) {
@@ -394,8 +535,8 @@ async function syncVariants(
     })
   }
 
-  const priced = updating.filter((variant) => variant.prices)
-  const unpriced = updating.filter((variant) => !variant.prices)
+  const priced = updating.filter((variant) => variant.prices?.length)
+  const unpriced = updating.filter((variant) => !variant.prices?.length)
 
   if (priced.length) {
     await updateProductVariantsWorkflow(container).run({
@@ -445,11 +586,10 @@ function variantInput(
   product: ImportedProduct,
   variant: ImportedVariant,
   axis: string,
-  currencyCodes: string[],
+  prices: PriceInput[] | undefined,
   metadata: Record<string, unknown> | null = null
 ) {
   const value = optionValue(variant, axis)
-  const prices = pricesFor(variant.price, currencyCodes)
   const compareAt =
     variant.compareAtPrice &&
     variant.price &&
@@ -462,7 +602,7 @@ function variantInput(
     sku: variant.barcode,
     barcode: variant.barcode,
     options: { [axis]: value },
-    ...(prices ? { prices } : {}),
+    ...(prices?.length ? { prices } : {}),
     metadata: {
       ...(metadata ?? {}),
       compare_at_price: compareAt,
@@ -485,6 +625,14 @@ async function loadProduct(container: MedusaContainer, id: string): Promise<Prod
       "variants.id",
       "variants.barcode",
       "variants.metadata",
+      "variants.prices.id",
+      "variants.prices.amount",
+      "variants.prices.currency_code",
+      "variants.prices.min_quantity",
+      "variants.prices.max_quantity",
+      "variants.prices.price_list_id",
+      "variants.prices.price_rules.attribute",
+      "variants.prices.price_rules.value",
     ],
     filters: { id },
   })
@@ -533,10 +681,59 @@ async function loadProduct(container: MedusaContainer, id: string): Promise<Prod
           id: record.id,
           barcode: typeof record.barcode === "string" ? record.barcode : null,
           metadata: asRecord(record.metadata),
+          prices: priceRowsOf(record.prices),
         },
       ]
     }),
   }
+}
+
+/**
+ * PriceRowsOf skips price list prices. Medusa never replaces those when a
+ * variant's prices are updated.
+ */
+function priceRowsOf(value: unknown): PriceRow[] {
+  return asArray(value).flatMap((price) => {
+    const record = asRecord(price)
+    const amount = Number(record?.amount)
+
+    if (
+      !record ||
+      typeof record.id !== "string" ||
+      typeof record.currency_code !== "string" ||
+      record.price_list_id ||
+      !Number.isFinite(amount)
+    ) {
+      return []
+    }
+
+    return [
+      {
+        id: record.id,
+        amount,
+        currency_code: record.currency_code.toLowerCase(),
+        min_quantity: numberOrNull(record.min_quantity),
+        max_quantity: numberOrNull(record.max_quantity),
+        rules: Object.fromEntries(
+          asArray(record.price_rules).flatMap((rule) => {
+            const row = asRecord(rule)
+            return typeof row?.attribute === "string" && typeof row.value === "string"
+              ? [[row.attribute, row.value]]
+              : []
+          })
+        ),
+      },
+    ]
+  })
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null
+  }
+
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
 }
 
 async function availableHandle(
@@ -574,7 +771,14 @@ async function downloadImages(urls: string[]): Promise<DownloadedImage[]> {
   for (const url of urls) {
     const response = await remoteGet(url, "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
 
-    if (response.status < 200 || response.status >= 300 || !response.mediaType.startsWith("image/")) {
+    if (response.status < 200 || response.status >= 300) {
+      throw new HttpStatusException(
+        response.status,
+        `Ürün görseli için HTTP ${response.status} döndü: ${url}`
+      )
+    }
+
+    if (!response.mediaType.startsWith("image/")) {
       throw new ImportException(`Ürün görseli indirilemedi: ${url}`)
     }
 
@@ -628,18 +832,20 @@ function optionValue(variant: ImportedVariant, axis: string): string {
   return variant.attributes.find((attribute) => attribute.name === axis)?.value || "Standart"
 }
 
-function pricesFor(amount: string | null, currencyCodes: string[]) {
-  if (!amount) {
-    return undefined
+function pickCurrency(context: StoreContext, code: string | null): string {
+  if (!code) {
+    return context.defaultCurrency
   }
 
-  const value = Number(amount)
+  const currency = code.toLowerCase()
 
-  return currencyCodes.map((currency_code) => ({
-    amount: value,
-    currency_code,
-  }))
+  if (!context.currencyCodes.includes(currency)) {
+    throw new ImportException(`${currency.toUpperCase()} para birimi mağazada tanımlı değil.`)
+  }
+
+  return currency
 }
+
 
 function describe(product: ImportedProduct): string {
   const lines: string[] = []
@@ -675,17 +881,14 @@ function metadataOf(product: ImportedProduct, color: string): Record<string, unk
   }
 }
 
-function currencyWarnings(currency: string | null, codes: string[]): string[] {
-  if (!currency) {
+function currencyWarnings(source: string | null, currency: string): string[] {
+  if (!source || source.toLowerCase() === currency) {
     return []
   }
 
-  return codes
-    .filter((code) => code.toUpperCase() !== currency.toUpperCase())
-    .map(
-      (code) =>
-        `Kaynak fiyat ${currency} ve mağaza ${code.toUpperCase()} kullanıyor. Sayı olduğu gibi kaydedildi.`
-    )
+  return [
+    `Kaynak fiyat ${source.toUpperCase()}, kayıt ${currency.toUpperCase()}. Sayı kur çevrimi yapılmadan yazıldı.`,
+  ]
 }
 
 function extension(mediaType: string): string {

@@ -21,6 +21,7 @@ import {
   SectionSettings,
   SectionType,
 } from "../types"
+import { cleanTranslations, takeTranslations } from "./translations"
 
 const PLACEMENTS = new Set<string>(["buy", "aside", "below"])
 
@@ -75,8 +76,13 @@ export function normalizeSettings(
   type: SectionType,
   settings: unknown
 ): SectionSettings {
-  const { content, layout } = takeLayout(settings)
-  return putLayout(parseSettings(type, content), layout)
+  const { content: withoutTranslations, translations } = takeTranslations(settings)
+  const { content, layout } = takeLayout(withoutTranslations)
+  const parsed = parseSettings(type, content)
+  const next = putLayout(parsed, layout)
+  const cleaned = cleanTranslations(type, parsed, translations)
+
+  return cleaned ? { ...next, translations: cleaned } : next
 }
 
 function parseSettings(type: SectionType, settings: unknown): SectionSettings {

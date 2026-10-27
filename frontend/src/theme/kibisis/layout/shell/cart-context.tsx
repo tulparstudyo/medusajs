@@ -14,6 +14,7 @@ import {
   useState,
 } from "react"
 
+import { useT } from "../../i18n/client"
 import type { ThemeIconName } from "../../icons"
 
 export type KibisisCartItem = {
@@ -40,6 +41,7 @@ type KibisisCartContextValue = {
   items: KibisisCartItem[]
   count: number
   total: number
+  currency: string | undefined
   checkoutPath: string
   drawerOpen: boolean
   toast: ToastState
@@ -69,8 +71,8 @@ export function checkoutPathFor(
   return "/checkout?step=payment"
 }
 
-function lineName(item: HttpTypes.StoreCartLineItem) {
-  const title = item.product_title || item.title || "Ürün"
+function lineName(item: HttpTypes.StoreCartLineItem, fallback: string) {
+  const title = item.product_title || item.title || fallback
   const variant = item.variant_title
   if (!variant || variant === "Default Title" || variant === "Default") {
     return title
@@ -92,12 +94,13 @@ function linePrice(item: HttpTypes.StoreCartLineItem) {
 }
 
 export function sessionItems(
-  cart: HttpTypes.StoreCart | null | undefined
+  cart: HttpTypes.StoreCart | null | undefined,
+  fallback: string
 ): KibisisCartItem[] {
   return (cart?.items ?? []).map((item) => ({
     id: item.id,
     variantId: item.variant_id ?? undefined,
-    name: lineName(item),
+    name: lineName(item, fallback),
     price: linePrice(item),
     quantity: item.quantity,
   }))
@@ -119,11 +122,13 @@ export function KibisisCartProvider({
   const router = useRouter()
   const params = useParams()
   const countryCode = String(params.countryCode || "")
-  const [items, setItems] = useState<KibisisCartItem[]>(() => sessionItems(cart))
+  const t = useT()
+  const fallbackName = t("cart.product_fallback")
+  const [items, setItems] = useState<KibisisCartItem[]>(() => sessionItems(cart, fallbackName))
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [toast, setToast] = useState<ToastState>({
-    message: "Ürün sepete eklendi!",
+    message: t("toast.added"),
     icon: "check",
     visible: false,
   })
@@ -133,8 +138,8 @@ export function KibisisCartProvider({
   const key = cartKey(cart)
 
   useEffect(() => {
-    setItems(sessionItems(cart))
-  }, [key, cart])
+    setItems(sessionItems(cart, fallbackName))
+  }, [key, cart, fallbackName])
 
   useEffect(() => {
     return () => {
@@ -157,12 +162,12 @@ export function KibisisCartProvider({
   const addItem = useCallback(
     (item: AddInput) => {
       if (!item.variantId) {
-        showToast("Bu ürün oturum sepetine eklenemiyor", "x-mark")
+        showToast(t("toast.cannot_add"), "x-mark")
         return
       }
 
       if (!countryCode) {
-        showToast("Ülke oturumu bulunamadı", "x-mark")
+        showToast(t("toast.no_country"), "x-mark")
         return
       }
 
@@ -188,7 +193,7 @@ export function KibisisCartProvider({
           },
         ]
       })
-      showToast(`${item.name.substring(0, 24)}... sepete eklendi!`)
+      showToast(t("toast.added_named", { name: item.name.substring(0, 24) }))
       setPending(true)
 
       void addToCart({
@@ -202,7 +207,7 @@ export function KibisisCartProvider({
         .catch((error: unknown) => {
           setItems(snapshot)
           showToast(
-            error instanceof Error ? error.message : "Sepete eklenemedi",
+            error instanceof Error ? error.message : t("toast.add_failed"),
             "x-mark"
           )
         })
@@ -210,7 +215,7 @@ export function KibisisCartProvider({
           setPending(false)
         })
     },
-    [countryCode, refresh, showToast]
+    [countryCode, refresh, showToast, t]
   )
 
   const removeItem = useCallback(
@@ -226,13 +231,13 @@ export function KibisisCartProvider({
 
       void deleteLineItem(id)
         .then(() => {
-          showToast("Ürün sepetten kaldırıldı", "trash")
+          showToast(t("toast.removed"), "trash")
           refresh()
         })
         .catch((error: unknown) => {
           setItems(snapshot)
           showToast(
-            error instanceof Error ? error.message : "Ürün kaldırılamadı",
+            error instanceof Error ? error.message : t("toast.remove_failed"),
             "x-mark"
           )
         })
@@ -240,7 +245,7 @@ export function KibisisCartProvider({
           setPending(false)
         })
     },
-    [refresh, showToast]
+    [refresh, showToast, t]
   )
 
   const updateQuantity = useCallback(
@@ -263,7 +268,7 @@ export function KibisisCartProvider({
         .catch((error: unknown) => {
           setItems(snapshot)
           showToast(
-            error instanceof Error ? error.message : "Adet güncellenemedi",
+            error instanceof Error ? error.message : t("toast.quantity_failed"),
             "x-mark"
           )
         })
@@ -271,7 +276,7 @@ export function KibisisCartProvider({
           setPending(false)
         })
     },
-    [refresh, removeItem, showToast]
+    [refresh, removeItem, showToast, t]
   )
 
   const clearCart = useCallback(() => {
@@ -285,20 +290,20 @@ export function KibisisCartProvider({
 
     void Promise.all(snapshot.map((item) => deleteLineItem(item.id)))
       .then(() => {
-        showToast("Sepet temizlendi", "trash")
+        showToast(t("toast.cleared"), "trash")
         refresh()
       })
       .catch((error: unknown) => {
         setItems(snapshot)
         showToast(
-          error instanceof Error ? error.message : "Sepet temizlenemedi",
+          error instanceof Error ? error.message : t("toast.clear_failed"),
           "x-mark"
         )
       })
       .finally(() => {
         setPending(false)
       })
-  }, [refresh, showToast])
+  }, [refresh, showToast, t])
 
   const openCart = useCallback(() => setDrawerOpen(true), [])
   const closeCart = useCallback(() => setDrawerOpen(false), [])
@@ -308,6 +313,7 @@ export function KibisisCartProvider({
       items,
       count: items.reduce((sum, item) => sum + item.quantity, 0),
       total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      currency: cart?.currency_code,
       checkoutPath: checkoutPathFor(cart),
       drawerOpen,
       toast,

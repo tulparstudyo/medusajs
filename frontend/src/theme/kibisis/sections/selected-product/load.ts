@@ -4,6 +4,8 @@ import { HttpTypes } from "@medusajs/types"
 
 import type { KibisisProduct } from "../../home/data/products"
 import type { StorePageSection } from "@lib/data/pages"
+import type { MessageKey, Translate } from "../../i18n"
+import { getKibiI18n } from "../../i18n/server"
 
 const SOURCES = [
   "new",
@@ -25,14 +27,14 @@ type SelectedProductSettings = {
   tag_id: string
 }
 
-const SOURCE_LABELS: Record<ProductSource, string> = {
-  new: "Yeni ürünler",
-  popular: "Popüler ürünler",
-  advantageous: "Avantajlı ürünler",
-  discounted: "İndirimli ürünler",
-  random: "Random Ürünler",
-  editor: "Editörün Seçimi",
-  tagged: "Etiketli Ürünler",
+const SOURCE_LABELS: Record<ProductSource, MessageKey> = {
+  new: "source.new",
+  popular: "source.popular",
+  advantageous: "source.advantageous",
+  discounted: "source.discounted",
+  random: "source.random",
+  editor: "source.editor",
+  tagged: "source.tagged",
 }
 
 const POPULAR_TAGS = new Set(["bestseller", "popüler", "populer", "popular"])
@@ -42,7 +44,7 @@ const FIELDS =
 
 const sources = new Set<string>(SOURCES)
 
-function readSettings(section: StorePageSection): SelectedProductSettings {
+function readSettings(section: StorePageSection, t: Translate): SelectedProductSettings {
   const settings = section.settings ?? {}
   const sourceValue = settings.source
   const source =
@@ -59,7 +61,7 @@ function readSettings(section: StorePageSection): SelectedProductSettings {
   const tagId = typeof settings.tag_id === "string" ? settings.tag_id : ""
 
   return {
-    title: title || SOURCE_LABELS[source],
+    title: title || t(SOURCE_LABELS[source]),
     source,
     limit: Math.min(24, Math.max(1, Math.trunc(limit) || 8)),
     product_ids: productIds,
@@ -67,7 +69,7 @@ function readSettings(section: StorePageSection): SelectedProductSettings {
   }
 }
 
-type Priced = { price: number; original: number; variantId: string }
+type Priced = { price: number; original: number; variantId: string; currency?: string }
 
 function cheapest(product: HttpTypes.StoreProduct): Priced | null {
   let best: Priced | null = null
@@ -81,7 +83,12 @@ function cheapest(product: HttpTypes.StoreProduct): Priced | null {
         ? variant.calculated_price.original_amount
         : amount
     if (!best || amount < best.price) {
-      best = { price: amount, original, variantId: variant.id }
+      best = {
+        price: amount,
+        original,
+        variantId: variant.id,
+        currency: variant.calculated_price?.currency_code ?? undefined,
+      }
     }
   }
   return best
@@ -133,7 +140,8 @@ async function fetchProducts(
 
 function toCard(
   product: HttpTypes.StoreProduct,
-  source: ProductSource
+  source: ProductSource,
+  t: Translate
 ): KibisisProduct | null {
   const price = cheapest(product)
   if (!price) {
@@ -142,14 +150,14 @@ function toCard(
 
   const onSale = price.original > price.price
   const badge = onSale
-    ? { badge: "İNDİRİM", badgeClass: "bg-rose-500" }
+    ? { badge: t("badge.sale"), badgeClass: "bg-rose-500" }
     : source === "new"
-      ? { badge: "YENİ", badgeClass: "bg-emerald-500" }
+      ? { badge: t("badge.new"), badgeClass: "bg-emerald-500" }
       : source === "popular"
-        ? { badge: "POPÜLER", badgeClass: "bg-orange-500" }
+        ? { badge: t("badge.popular"), badgeClass: "bg-orange-500" }
         : source === "advantageous"
-          ? { badge: "AVANTAJLI", badgeClass: "bg-orange-500" }
-          : { badge: "ÜRÜN", badgeClass: "bg-slate-500" }
+          ? { badge: t("badge.deal"), badgeClass: "bg-orange-500" }
+          : { badge: t("badge.product"), badgeClass: "bg-slate-500" }
 
   return {
     id: product.id,
@@ -159,6 +167,7 @@ function toCard(
     title: product.title ?? "",
     price: price.price,
     oldPrice: onSale ? price.original : undefined,
+    currency: price.currency,
     image: product.thumbnail || product.images?.[0]?.url || "",
     imageAlt: product.title ?? "",
     rating: "—",
@@ -173,7 +182,8 @@ export async function loadSelectedProducts(
   countryCode: string,
   section: StorePageSection
 ): Promise<{ title: string; products: KibisisProduct[] } | null> {
-  const settings = readSettings(section)
+  const { t } = await getKibiI18n()
+  const settings = readSettings(section, t)
   const region = await getRegion(countryCode)
   if (!region) {
     return null
@@ -224,7 +234,7 @@ export async function loadSelectedProducts(
 
   const cards = products
     .slice(0, settings.limit)
-    .map((product) => toCard(product, settings.source))
+    .map((product) => toCard(product, settings.source, t))
     .filter((product): product is KibisisProduct => Boolean(product))
 
   if (!cards.length) {

@@ -42,4 +42,12 @@ export class SourceRegistry {
 
     throw new ImportException(`${host} için ürün içe aktarıcı kayıtlı değil.`)
   }
+
+  key(url: string): string {
+    try {
+      return this.match(url).adapter.productKey(url)
+    } catch {
+      return url.trim()
+    }
+  }
 }

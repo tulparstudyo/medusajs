@@ -27,7 +27,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
   }
 
-  revalidateTag("products", { expire: 0 })
+  for (const tag of ["products", "categories", "collections"]) {
+    revalidateTag(tag, { expire: 0 })
+  }
 
   return NextResponse.json({ revalidated: true })
 }

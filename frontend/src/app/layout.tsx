@@ -1,15 +1,18 @@
+import { getLocale } from "@lib/data/locale-actions"
+import { DEFAULT_LOCALE } from "@lib/util/default-locale"
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
-import { theme } from "@theme"
 import "styles/globals.css"
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
 }
 
-export default function RootLayout(props: { children: React.ReactNode }) {
+export default async function RootLayout(props: { children: React.ReactNode }) {
+  const lang = (await getLocale()) || DEFAULT_LOCALE
+
   return (
-    <html lang={theme.lang} data-mode="light">
+    <html lang={lang} data-mode="light">
       <body>
         <main className="relative">{props.children}</main>
       </body>

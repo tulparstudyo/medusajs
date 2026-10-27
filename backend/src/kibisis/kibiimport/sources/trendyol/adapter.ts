@@ -1,15 +1,25 @@
 import { ImportException } from "../../errors"
 import { isColorLabel } from "../../lib/color"
+import { hostMatches } from "../../lib/urls"
 import { compareMoney, roundMoney } from "../../money"
 import { ImportedAttribute, ImportedProduct, ImportedVariant, ProductAdapter } from "../../types"
 
 type Json = Record<string, unknown>
 
+const ORIGIN = "https://www.trendyol.com"
+
 /**
  * TrendyolAdapter maps a Trendyol product document to a shop-neutral product.
  * Size rows become variants. Properties shared by every size stay on the product.
+ * Other colours are separate Trendyol products and come back as links.
  */
 export class TrendyolAdapter implements ProductAdapter {
+  productKey(url: string): string {
+    const match = url.match(/-p-(\d+)(?=[/?#]|$)/)
+
+    return match ? `trendyol:${match[1]}` : url.trim()
+  }
+
   adapt(url: string, payload: Record<string, unknown>): ImportedProduct {
     const product = asRecord(payload.product)
 
@@ -38,7 +48,42 @@ export class TrendyolAdapter implements ProductAdapter {
       attributes: sharedAttributes(product, axes),
       variants: variantsOf(product, axes, winnerPrice),
       images: imagesOf(product),
+      colorUrls: colorUrlsOf(payload.colorLinks, id),
     }
+  }
+}
+
+function colorUrlsOf(links: unknown, currentId: string): string[] {
+  const urls: string[] = []
+  const seen = new Set<string>([currentId])
+
+  for (const link of asArray(links)) {
+    const address = absoluteUrl(text(link))
+    const id = address?.match(/-p-(\d+)(?=[/?#]|$)/)?.[1]
+
+    if (!address || !id || seen.has(id)) {
+      continue
+    }
+
+    seen.add(id)
+    urls.push(address)
+  }
+
+  return urls
+}
+
+function absoluteUrl(pageUrl: string): string | null {
+  if (!pageUrl) {
+    return null
+  }
+
+  try {
+    const address = new URL(pageUrl, ORIGIN)
+    return address.protocol === "https:" && hostMatches(address.hostname, "trendyol.com")
+      ? address.toString()
+      : null
+  } catch {
+    return null
   }
 }
 
@@ -135,6 +180,7 @@ function variantsOf(product: Json, axes: string[], winnerPrice: Json | null): Im
       compareAtPrice: compareAt,
       attributes,
       sortOrder: index,
+      inStock: record.inStock !== false,
     })
   })
 
@@ -150,6 +196,7 @@ function variantsOf(product: Json, axes: string[], winnerPrice: Json | null): Im
       compareAtPrice: compareAt,
       attributes: [],
       sortOrder: 0,
+      inStock: product.inStock !== false,
     },
   ]
 }

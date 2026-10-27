@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-  Frontend (8000) ve backend (9000) durdur, derle, yeniden baslat.
+  Frontend (8000), backend (9000) ve CDN (9080) durdur, derle, yeniden baslat.
 
 .EXAMPLE
   .\restart.ps1
@@ -15,7 +15,8 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Backend = Join-Path $Root 'backend'
 $Frontend = Join-Path $Root 'frontend'
-$Ports = @(9000, 8000)
+$Cdn = Join-Path $Root 'cdn'
+$Ports = @(9000, 8000, 9080)
 
 function Write-Step([string]$Message) {
   Write-Host "`n==> $Message" -ForegroundColor Cyan
@@ -72,7 +73,7 @@ function Start-AppWindow([string]$Title, [string]$Directory, [string]$ScriptName
   )
 }
 
-Write-Step 'Frontend ve backend durduruluyor'
+Write-Step 'Frontend, backend ve CDN durduruluyor'
 foreach ($port in $Ports) { Stop-ListenPort $port }
 Start-Sleep -Seconds 1
 foreach ($port in $Ports) {
@@ -93,8 +94,9 @@ if (-not $Dev) {
 Write-Step "Yeniden baslatiliyor (pnpm $scriptName)"
 Start-AppWindow 'Medusa backend' $Backend $scriptName
 Start-AppWindow 'Next frontend' $Frontend $scriptName
+Start-AppWindow 'CDN' $Cdn $scriptName
 
-Write-Host "`nHazir. Backend http://localhost:9000/app  |  Vitrin http://localhost:8000/dk" -ForegroundColor Green
+Write-Host "`nHazir. Backend http://localhost:9000/app  |  Vitrin http://localhost:8000/tr  |  CDN http://localhost:9080" -ForegroundColor Green
 if ($Dev) {
   Write-Host 'Gelistirme modu: kaynak degisince yenilenir. Yayin icin parametresiz calistirin.' -ForegroundColor DarkGray
 }

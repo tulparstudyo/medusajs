@@ -1,10 +1,16 @@
 import { getNavigation, StoreNavItem } from "@lib/data/navigation"
-import { getContactSettings, storeInitials, storeName } from "@lib/data/site-settings"
+import {
+  getContactSettings,
+  storeInitials,
+  storeName,
+} from "@lib/data/site-settings"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+import { getKibiI18n } from "../../i18n/server"
 import MenuLink from "../menu-link"
 import CartTrigger from "./cart-trigger"
 import MobileMenu from "./mobile-menu"
+import { ScrollHeader } from "./scroll-chrome"
 import SearchBox from "./search-box"
 import TopBar from "./top-bar"
 
@@ -13,6 +19,7 @@ export default async function Nav() {
     getNavigation("main"),
     getContactSettings(),
   ])
+  const { t } = await getKibiI18n()
   const items = navigation.items
   const name = storeName(contact)
   const words = name.split(/\s+/).filter(Boolean)
@@ -21,7 +28,7 @@ export default async function Nav() {
   return (
     <>
       <TopBar />
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+      <ScrollHeader>
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:gap-4 lg:gap-8">
             {items.length > 0 && <MobileMenu items={items} />}
@@ -39,7 +46,7 @@ export default async function Nav() {
                   {accent && <span className="text-orange-600"> {accent}</span>}
                 </span>
                 <span className="text-[9px] font-semibold text-slate-400 tracking-wider uppercase">
-                  Pazar Yeri
+                  {t("nav.marketplace")}
                 </span>
               </div>
             </LocalizedClientLink>
@@ -64,10 +71,10 @@ export default async function Nav() {
                 </svg>
                 <div className="hidden sm:flex flex-col text-left">
                   <span className="text-[10px] text-slate-400 font-medium">
-                    Giriş Yap
+                    {t("nav.sign_in")}
                   </span>
                   <span className="font-bold text-slate-800 text-[11px]">
-                    veya Üye Ol
+                    {t("nav.or_sign_up")}
                   </span>
                 </div>
               </LocalizedClientLink>
@@ -84,7 +91,7 @@ export default async function Nav() {
             </div>
           </nav>
         )}
-      </header>
+      </ScrollHeader>
     </>
   )
 }

@@ -2,12 +2,15 @@
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+import { useMoney, useT } from "../../i18n/client"
 import { ThemeIcon } from "../../icons"
 import { useKibisisCart } from "./cart-context"
 
 export default function CartDrawer() {
-  const { items, count, total, checkoutPath, drawerOpen, closeCart, removeItem } =
+  const { items, count, total, currency, checkoutPath, drawerOpen, closeCart, removeItem } =
     useKibisisCart()
+  const t = useT()
+  const money = useMoney()
 
   return (
     <div
@@ -31,7 +34,7 @@ export default function CartDrawer() {
           <div className="flex items-center gap-2">
             <ThemeIcon name="shopping-cart" className="h-5 w-5 text-orange-600" />
             <h3 className="font-bold text-slate-900 text-base">
-              Alışveriş Sepetim (<span id="cart-drawer-count">{count}</span>)
+              {t("drawer.title")} (<span id="cart-drawer-count">{count}</span>)
             </h3>
           </div>
           <button
@@ -63,10 +66,10 @@ export default function CartDrawer() {
             <div className="h-64 flex flex-col items-center justify-center text-center text-slate-400">
               <ThemeIcon name="shopping-bag" className="mb-2 h-10 w-10" />
               <p className="text-sm font-semibold text-slate-600">
-                Sepetiniz şu an boş
+                {t("cart.empty")}
               </p>
               <p className="text-xs mt-1">
-                Fırsat ürünlerini keşfedip hemen ekleyebilirsiniz.
+                {t("drawer.empty_hint")}
               </p>
             </div>
           ) : (
@@ -80,7 +83,7 @@ export default function CartDrawer() {
                     {item.name}
                   </h4>
                   <div className="text-xs font-bold text-orange-600 mt-0.5">
-                    {item.price.toFixed(2)} TL
+                    {money(item.price, currency)}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -113,27 +116,23 @@ export default function CartDrawer() {
 
         <div className="p-4 border-t border-slate-200 bg-slate-50 space-y-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500">Ara Toplam:</span>
+            <span className="text-slate-500">{t("drawer.subtotal")}</span>
             <span
               id="cart-subtotal"
               className="font-extrabold text-slate-900 text-base"
             >
-              {total.toLocaleString("tr-TR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{" "}
-              TL
+              {money(total, currency)}
             </span>
           </div>
           <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-            <ThemeIcon name="check" className="h-3.5 w-3.5" /> 150 TL üzeri kargo bedava!
+            <ThemeIcon name="check" className="h-3.5 w-3.5" /> {t("drawer.free_shipping")}
           </div>
           <LocalizedClientLink
             href={count > 0 ? checkoutPath : "/cart"}
             onClick={closeCart}
             className="flex w-full items-center justify-center bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-orange-600/20 text-sm"
           >
-            Siparişi Tamamla
+            {t("drawer.complete")}
           </LocalizedClientLink>
         </div>
       </div>

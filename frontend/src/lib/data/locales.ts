@@ -15,13 +15,13 @@ export type Locale = {
 export const listLocales = async (): Promise<Locale[] | null> => {
   const next = {
     ...(await getCacheOptions("locales")),
+    revalidate: 300,
   }
 
   return sdk.client
     .fetch<{ locales: Locale[] }>(`/store/locales`, {
       method: "GET",
       next,
-      cache: "force-cache",
     })
     .then(({ locales }) => locales)
     .catch(() => null)

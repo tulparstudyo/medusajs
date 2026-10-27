@@ -23,7 +23,7 @@ export function initHeroShowcase(root) {
     const button = document.createElement("button")
     button.type = "button"
     button.className = "kibi-hero__dot"
-    button.setAttribute("aria-label", `Slayt ${slideIndex + 1}`)
+    button.setAttribute("aria-label", `${stage.dataset.dotLabel || "Slide"} ${slideIndex + 1}`)
     button.addEventListener("click", () => show(slideIndex))
     dots?.appendChild(button)
   })

@@ -4,6 +4,7 @@ import {
   ChevronRight,
   CreditCard,
   Envelope,
+  Language,
   Share,
   TruckFast,
 } from "@medusajs/icons"
@@ -19,6 +20,7 @@ const MENU_ICONS: Record<SettingsKey, typeof Envelope> = {
   shipping: ArchiveBox,
   carriers: TruckFast,
   smtp: Envelope,
+  translate: Language,
 }
 
 export const settingsPath = (key: SettingsKey) => `/kibisettings/${key}`

@@ -31,7 +31,13 @@ module.exports = defineConfig({
       sameSite: "lax",
     },
   },
+  featureFlags: {
+    translation: true,
+  },
   modules: [
+    {
+      resolve: "@medusajs/medusa/translation",
+    },
     {
       resolve: "@medusajs/medusa/file",
       options: {
@@ -62,6 +68,9 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/kibisis/kibisettings",
+    },
+    {
+      resolve: "./src/kibisis/kibitranslate",
     },
   ],
 })

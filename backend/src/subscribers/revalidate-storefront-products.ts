@@ -7,6 +7,12 @@ const EVENTS = [
   "product-variant.created",
   "product-variant.updated",
   "product-variant.deleted",
+  "product-category.created",
+  "product-category.updated",
+  "product-category.deleted",
+  "product-collection.created",
+  "product-collection.updated",
+  "product-collection.deleted",
 ]
 
 export default async function revalidateStorefrontProducts({
@@ -18,7 +24,7 @@ export default async function revalidateStorefrontProducts({
 
   if (!secret) {
     logger.warn(
-      "STOREFRONT_REVALIDATE_SECRET is not set; storefront product cache was not cleared."
+      "STOREFRONT_REVALIDATE_SECRET is not set; storefront catalog cache was not cleared."
     )
     return
   }
@@ -34,12 +40,12 @@ export default async function revalidateStorefrontProducts({
 
     if (!response.ok) {
       logger.warn(
-        `Storefront product cache was not cleared: ${response.status}`
+        `Storefront catalog cache was not cleared: ${response.status}`
       )
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error"
-    logger.warn(`Storefront product cache request failed: ${message}`)
+    logger.warn(`Storefront catalog cache request failed: ${message}`)
   }
 }
 

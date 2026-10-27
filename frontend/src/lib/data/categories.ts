@@ -1,6 +1,6 @@
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
-import { getCacheOptions } from "./cookies"
+import { getCatalogCacheOptions } from "./cookies"
 
 export function categoryTreeIds(
   category: HttpTypes.StoreProductCategory
@@ -15,7 +15,7 @@ export function categoryTreeIds(
 
 export const listCategories = async (query?: Record<string, unknown>) => {
   const next = {
-    ...(await getCacheOptions("categories")),
+    ...(await getCatalogCacheOptions("categories")),
   }
 
   const limit = query?.limit || 100
@@ -49,7 +49,7 @@ export const getCategoryByHandle = async (categoryHandle: string[]) => {
     .join("/")
 
   const next = {
-    ...(await getCacheOptions("categories")),
+    ...(await getCatalogCacheOptions("categories")),
   }
 
   return sdk.client

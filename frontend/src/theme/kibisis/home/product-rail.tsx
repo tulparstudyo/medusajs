@@ -4,6 +4,7 @@ import { useRef } from "react"
 
 import type { KibisisProduct } from "./data/products"
 import ProductCard from "./product-card"
+import { useT } from "../i18n/client"
 import { ThemeIcon } from "../icons"
 
 type ProductRailProps = {
@@ -20,6 +21,7 @@ export default function ProductRail({
   controls,
 }: ProductRailProps) {
   const railRef = useRef<HTMLDivElement>(null)
+  const t = useT()
 
   const scrollBy = (left: number) => {
     railRef.current?.scrollBy({ left, behavior: "smooth" })
@@ -81,7 +83,7 @@ export default function ProductRail({
             href={`#${sectionId}`}
             className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
           >
-            Tümünü Gör <ThemeIcon name="chevron-right" className="h-3.5 w-3.5" />
+            {t("rail.view_all")} <ThemeIcon name="chevron-right" className="h-3.5 w-3.5" />
           </a>
         )}
       </div>

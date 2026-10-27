@@ -1,4 +1,12 @@
-export const SETTINGS_KEYS = ["store", "social", "payment", "shipping", "carriers", "smtp"] as const
+export const SETTINGS_KEYS = [
+  "store",
+  "social",
+  "payment",
+  "shipping",
+  "carriers",
+  "smtp",
+  "translate",
+] as const
 
 export type SettingsKey = (typeof SETTINGS_KEYS)[number]
 
@@ -41,7 +49,7 @@ export const SETTINGS_MENU: { key: SettingsKey; label: string; description: stri
   },
   {
     key: "shipping",
-    label: "Kargo Gönderi Ayarları",
+    label: "Kargo Ayarları",
     description: "Varsayılan kargo firması, ücretler, gönderim süresi ve gönderici bilgileri.",
   },
   {
@@ -54,7 +62,25 @@ export const SETTINGS_MENU: { key: SettingsKey; label: string; description: stri
     label: "SMTP Ayarları",
     description: "E-posta gönderimi için sunucu, hesap ve gönderen bilgileri.",
   },
+  {
+    key: "translate",
+    label: "AI Çeviri",
+    description: "Bölüm çevirilerinde kullanılan otomatik çeviri hizmeti ve API anahtarları.",
+  },
 ]
+
+/** Providers with a working adapter. Add an id here only together with its kibitranslate provider. */
+export const TRANSLATE_PROVIDERS = ["google", "gemini"] as const
+export type TranslateProvider = (typeof TRANSLATE_PROVIDERS)[number]
+
+/** Shown in the admin; providers without an adapter yet are listed as unavailable. */
+export const TRANSLATE_PROVIDER_CATALOG: { id: string; label: string; available: boolean }[] = [
+  { id: "google", label: "Google Translate (Cloud Translation)", available: true },
+  { id: "gemini", label: "Google Gemini (AI Studio)", available: true },
+  { id: "openai", label: "ChatGPT (OpenAI)", available: false },
+]
+
+export const GEMINI_DEFAULT_MODEL = "gemini-flash-latest"
 
 export const PAYMENT_PROVIDERS = ["iyzico", "paytr"] as const
 export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number]
@@ -172,6 +198,24 @@ export type SmtpSettings = {
   reply_to: string
 }
 
+export const GOOGLE_AUTH_MODES = ["api_key", "service_account"] as const
+export type GoogleAuthMode = (typeof GOOGLE_AUTH_MODES)[number]
+
+export const GOOGLE_AUTH_MODE_LABELS: Record<GoogleAuthMode, string> = {
+  api_key: "API anahtarı",
+  service_account: "Hizmet hesabı (JSON anahtar)",
+}
+
+export type TranslateSettings = {
+  enabled: boolean
+  provider: TranslateProvider
+  google_auth: GoogleAuthMode
+  google_api_key: string
+  google_service_account: string
+  gemini_api_key: string
+  gemini_model: string
+}
+
 export type SettingsValues = {
   store: StoreSettings
   social: SocialSettings
@@ -179,6 +223,7 @@ export type SettingsValues = {
   shipping: ShippingSettings
   carriers: CarrierSettings
   smtp: SmtpSettings
+  translate: TranslateSettings
 }
 
 export type SecretField<K extends SettingsKey> = K extends "carriers"
@@ -193,6 +238,7 @@ export const SECRET_FIELDS = {
   shipping: [],
   carriers: [],
   smtp: ["password"],
+  translate: ["google_api_key", "google_service_account", "gemini_api_key"],
 } as const satisfies { [K in SettingsKey]: readonly (keyof SettingsValues[K])[] }
 
 export const SETTINGS_DEFAULTS: SettingsValues = {
@@ -255,6 +301,15 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
     from_name: "",
     from_email: "",
     reply_to: "",
+  },
+  translate: {
+    enabled: false,
+    provider: "google",
+    google_auth: "api_key",
+    google_api_key: "",
+    google_service_account: "",
+    gemini_api_key: "",
+    gemini_model: GEMINI_DEFAULT_MODEL,
   },
 }
 

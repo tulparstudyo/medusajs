@@ -4,15 +4,10 @@ import { useState } from "react"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+import { useMoney, useT } from "../i18n/client"
 import { ThemeIcon } from "../icons"
 import { useKibisisCart } from "../layout/shell/cart-context"
 import type { KibisisProduct } from "./data/products"
-
-const formatPrice = (value: number) =>
-  value.toLocaleString("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
 
 export default function ProductCard({
   product,
@@ -22,15 +17,17 @@ export default function ProductCard({
   layout?: "rail" | "grid"
 }) {
   const { addItem, showToast } = useKibisisCart()
+  const t = useT()
+  const money = useMoney()
   const [liked, setLiked] = useState(false)
 
   const toggleWishlist = () => {
     if (liked) {
       setLiked(false)
-      showToast("Favorilerden kaldırıldı", "heart")
+      showToast(t("toast.favorite_removed"), "heart")
     } else {
       setLiked(true)
-      showToast("Favorilere eklendi!", "heart")
+      showToast(t("toast.favorite_added"), "heart")
     }
   }
 
@@ -120,16 +117,16 @@ export default function ProductCard({
         <div>
           {product.oldPrice !== undefined && (
             <span className="text-[10px] text-slate-400 line-through">
-              {formatPrice(product.oldPrice)} TL
+              {money(product.oldPrice, product.currency)}
             </span>
           )}
           <div className="text-sm font-extrabold text-slate-950">
-            {formatPrice(product.price)} <span className="text-[11px]">TL</span>
+            {money(product.price, product.currency)}
           </div>
         </div>
         <button
           className="add-to-cart-btn pointer-events-auto p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-colors"
-          title="Sepete Ekle"
+          title={t("card.add_to_cart")}
           onClick={() =>
             addItem({
               variantId: product.variantId,

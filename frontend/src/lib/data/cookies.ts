@@ -49,6 +49,16 @@ export const getCacheOptions = async (
   return { tags: [`${cacheTag}`] }
 }
 
+// Catalog data is also tagged without the visitor's cache id so the backend
+// can clear it for everyone through /api/revalidate.
+export const getCatalogCacheOptions = async (
+  tag: "products" | "categories" | "collections"
+): Promise<{ tags: string[] }> => {
+  const cached = await getCacheOptions(tag)
+
+  return { tags: [tag, ...("tags" in cached ? cached.tags : [])] }
+}
+
 // `sameSite: "lax"` rather than `"strict"`: the customer returns from a
 // redirect-based payment method (iDEAL, Bancontact, ...) via a cross-site
 // top-level navigation. A "strict" cookie is withheld on that navigation, so

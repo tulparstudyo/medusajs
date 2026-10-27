@@ -1,9 +1,11 @@
 "use client"
 
+import { useT } from "../../i18n/client"
 import { useKibisisCart } from "../shell/cart-context"
 
 export default function CartTrigger() {
   const { count, openCart } = useKibisisCart()
+  const t = useT()
 
   return (
     <button
@@ -32,7 +34,7 @@ export default function CartTrigger() {
           {count}
         </span>
       </div>
-      <span className="hidden md:inline font-bold text-xs">Sepetim</span>
+      <span className="hidden md:inline font-bold text-xs">{t("nav.my_cart")}</span>
     </button>
   )
 }

@@ -5,7 +5,7 @@ const NavItem = model
     id: model.id({ prefix: "knav" }).primaryKey(),
     menu: model.enum(["main", "footer", "top", "bottom"]).default("main"),
     align: model.enum(["start", "end"]).default("start"),
-    label: model.text(),
+    label: model.text().translatable(),
     parent_id: model.text().nullable(),
     position: model.number().default(0),
     target_type: model.enum(["category", "url", "anchor"]),

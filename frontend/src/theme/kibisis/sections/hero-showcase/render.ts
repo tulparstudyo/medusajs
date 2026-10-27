@@ -1,4 +1,5 @@
 import { themeIconHtml } from "../../icon-html"
+import { translateTemplate, type Translate } from "../../i18n"
 import "server-only"
 
 import { readFileSync } from "node:fs"
@@ -130,7 +131,7 @@ function cardHtml(template: string, card: Card) {
     .replace(/\shref=""/, "")
 }
 
-export function renderHeroShowcase(instanceId: string, settings: unknown) {
+export function renderHeroShowcase(instanceId: string, settings: unknown, t: Translate) {
   const slides = readSlides(settings)
   const source =
     settings && typeof settings === "object" ? (settings as Record<string, unknown>) : {}
@@ -140,13 +141,16 @@ export function renderHeroShowcase(instanceId: string, settings: unknown) {
     return null
   }
 
-  const template = readFileSync(
-    path.join(process.cwd(), "src/theme/kibisis/sections/hero-showcase/index.html"),
-    "utf8"
+  const template = translateTemplate(
+    readFileSync(
+      path.join(process.cwd(), "src/theme/kibisis/sections/hero-showcase/index.html"),
+      "utf8"
+    ),
+    t
   )
   const shell = template.split("<template")[0]?.trim()
   if (!shell) {
-    throw new Error("hero-showcase şablonu okunamadı.")
+    throw new Error("Could not read the hero-showcase template.")
   }
 
   const slideTemplate = part(template, "slide")

@@ -6,6 +6,7 @@ export type KibisisProduct = {
   title: string
   price: number
   oldPrice?: number
+  currency?: string
   image: string
   imageAlt: string
   badge: string

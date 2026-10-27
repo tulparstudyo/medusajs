@@ -1,11 +1,11 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 
-import { writeProduct } from "./catalog"
+import { IMPORT_STOCK, writeProduct } from "./catalog"
 import { ImportException } from "./errors"
 import { KIBIIMPORT_MODULE } from "./index"
 import { SourceRegistry } from "./registry"
 import KibiimportModuleService from "./service"
-import { ImportedProduct, ImportedVariant, ImportResult } from "./types"
+import { ImportedProduct, ImportedVariant, ImportResult, StockResult } from "./types"
 
 export async function readProduct(url: string): Promise<ImportedProduct> {
   const source = new SourceRegistry().match(url)
@@ -19,12 +19,14 @@ export async function readProduct(url: string): Promise<ImportedProduct> {
 export async function importProduct(
   container: MedusaContainer,
   url: string,
-  categoryId: string
+  categoryId: string,
+  locationIds: string[] = [],
+  currencyCode: string | null = null
 ): Promise<ImportResult> {
   const product = await readProduct(url)
   const service = container.resolve(KIBIIMPORT_MODULE) as KibiimportModuleService
 
-  return await writeProduct(container, service, product, categoryId)
+  return await writeProduct(container, service, product, categoryId, locationIds, currencyCode)
 }
 
 export function renderResult(result: ImportResult): string {
@@ -34,11 +36,19 @@ export function renderResult(result: ImportResult): string {
     `${action}: ${result.name} (${result.code}, ${result.productId}).`,
     `Varyantlar: ${result.createdVariants} yeni, ${result.updatedVariants} güncellendi, ${result.removedVariants} silindi.`,
     `Görseller: ${result.images}.`,
-    "Fiyat her para birimine yazıldı.",
+    `Fiyat ${result.currency.toUpperCase()} olarak yazıldı; diğer para birimlerindeki fiyatlar korundu.`,
     `Kategori: ${result.category}.`,
     ...result.warnings,
-    "Stok içe aktarılmadı.",
+    renderStock(result.stock),
   ].join("\n")
+}
+
+function renderStock(stock: StockResult): string {
+  if (!stock.locations.length) {
+    return "Stok yazılmadı: lokasyon seçilmedi."
+  }
+
+  return `Stok (${stock.locations.join(", ")}): ${stock.stocked} varyant en az ${IMPORT_STOCK} adet, ${stock.soldOut} varyant tükendi.`
 }
 
 export function renderPreview(product: ImportedProduct): string {
@@ -57,13 +67,16 @@ export function renderPreview(product: ImportedProduct): string {
     "",
     "Varyantlar",
     ...product.variants.map((variant) => previewVariant(variant)),
+    "",
+    "Diğer renkler",
+    ...(product.colorUrls.length ? product.colorUrls : ["—"]),
   ].join("\n")
 }
 
 function previewVariant(variant: ImportedVariant): string {
   const options = variant.attributes.map((attribute) => attribute.value).join(" / ") || "—"
 
-  return `${variant.barcode}  ${options}  ${variant.price ?? "—"}`
+  return `${variant.barcode}  ${options}  ${variant.price ?? "—"}  ${variant.inStock ? "stokta" : "tükendi"}`
 }
 
 function assertProduct(product: ImportedProduct): void {

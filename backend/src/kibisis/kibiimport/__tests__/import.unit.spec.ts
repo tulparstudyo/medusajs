@@ -1,7 +1,8 @@
 import { categoryPaths } from "../lib/categories"
 import { TrendyolAdapter } from "../sources/trendyol/adapter"
-import { jsonObject } from "../sources/trendyol/parse"
+import { colorLinks, jsonObject } from "../sources/trendyol/parse"
 import { roundMoney } from "../money"
+import { mergePrices, PriceRow } from "../prices"
 import { productHost, splitProductUrls } from "../lib/urls"
 
 const product = {
@@ -18,7 +19,7 @@ const product = {
   images: ["https://cdn.example/1.jpg", "https://cdn.example/1.jpg", "http://cdn.example/2.jpg"],
   variants: [
     { value: "36", barcode: "111", price: { value: 100 }, itemNumber: "A" },
-    { value: "37", barcode: "222", price: { value: 100.005 } },
+    { value: "37", barcode: "222", price: { value: 100.005 }, inStock: false },
   ],
   merchantListing: {
     winnerVariant: {
@@ -95,6 +96,40 @@ describe("kibiimport", () => {
     expect(imported.variants[1]?.price).toBe("100.01")
     expect(imported.variants[0]?.compareAtPrice).toBe("120.00")
     expect(imported.variants[0]?.attributes).toEqual([{ name: "Beden", value: "36" }])
+    expect(imported.variants.map((variant) => variant.inStock)).toEqual([true, false])
+  })
+
+  it("reads other colour links from the product group data", () => {
+    const html = [
+      '<script type="application/ld+json">{"@type":"BreadcrumbList"}</script>',
+      '<script type="application/ld+json">{"@type":"ProductGroup","hasVariant":[',
+      '{"color":"gri","offers":{"url":"https://www.trendyol.com/nexs/gri-babet-p-100"}},',
+      '{"color":"mavi","url":"https://www.trendyol.com/nexs/mavi-babet-p-101"}',
+      "]}</script>",
+    ].join("")
+
+    expect(colorLinks(html)).toEqual([
+      "https://www.trendyol.com/nexs/gri-babet-p-100",
+      "https://www.trendyol.com/nexs/mavi-babet-p-101",
+    ])
+  })
+
+  it("keeps trendyol colour links of other products only", () => {
+    const imported = new TrendyolAdapter().adapt("https://www.trendyol.com/nexs/babet-p-99", {
+      product,
+      colorLinks: [
+        "https://www.trendyol.com/nexs/babet-p-99",
+        "https://www.trendyol.com/nexs/gri-babet-p-100",
+        "https://www.trendyol.com/nexs/gri-babet-p-100?boutiqueId=1",
+        "https://example.com/babet-p-102",
+        "/nexs/mavi-babet-p-103",
+      ],
+    })
+
+    expect(imported.colorUrls).toEqual([
+      "https://www.trendyol.com/nexs/gri-babet-p-100",
+      "https://www.trendyol.com/nexs/mavi-babet-p-103",
+    ])
   })
 
   it("refuses a link whose product id does not match", () => {
@@ -103,5 +138,40 @@ describe("kibiimport", () => {
         product,
       })
     ).toThrow("eşleşmiyor")
+  })
+
+  describe("mergePrices", () => {
+    const existing: PriceRow[] = [
+      { id: "p_try", amount: 100, currency_code: "try", min_quantity: null, max_quantity: null, rules: {} },
+      { id: "p_eur", amount: 5, currency_code: "eur", min_quantity: null, max_quantity: null, rules: {} },
+      {
+        id: "p_try_tr",
+        amount: 90,
+        currency_code: "try",
+        min_quantity: null,
+        max_quantity: null,
+        rules: { region_id: "reg_tr" },
+      },
+    ]
+
+    it("updates the import currency in place and keeps other prices", () => {
+      expect(mergePrices(existing, "120", "try")).toEqual([
+        { id: "p_eur", amount: 5, currency_code: "eur", rules: {} },
+        { id: "p_try_tr", amount: 90, currency_code: "try", rules: { region_id: "reg_tr" } },
+        { id: "p_try", amount: 120, currency_code: "try" },
+      ])
+    })
+
+    it("adds a price for a currency the variant did not have", () => {
+      expect(mergePrices(existing, "7", "rub")).toContainEqual({ amount: 7, currency_code: "rub" })
+      expect(mergePrices(existing, "7", "rub")).toHaveLength(4)
+    })
+
+    it("drops only the import currency when the source has no price", () => {
+      expect(mergePrices(existing, null, "try").map((price) => price.id)).toEqual([
+        "p_eur",
+        "p_try_tr",
+      ])
+    })
   })
 })

@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import {
+  applyTranslations,
   ContainerRegistrationKeys,
   MedusaError,
 } from "@medusajs/framework/utils"
@@ -17,6 +18,11 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
   const service = req.scope.resolve<KibinavModuleService>(KIBINAV_MODULE)
   const items = await service.listMenu(parsed.data)
+  await applyTranslations({
+    localeCode: req.locale,
+    objects: items,
+    container: req.scope,
+  })
   const categoryIds = [
     ...new Set(
       items

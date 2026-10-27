@@ -86,7 +86,7 @@ export function renderQuickCategories(instanceId: string, settings: unknown) {
   )
   const match = template.match(ITEM_BLOCK)
   if (!match) {
-    throw new Error("quick-categories şablonunda {{#items}} bloğu yok.")
+    throw new Error("The quick-categories template has no {{#items}} block.")
   }
 
   const rendered = items

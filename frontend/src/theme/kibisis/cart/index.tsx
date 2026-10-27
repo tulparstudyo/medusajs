@@ -6,29 +6,18 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { FormEvent, useState } from "react"
 import { useRouter } from "next/navigation"
 
+import type { Translate } from "../i18n"
+import { useMoney, useT } from "../i18n/client"
 import { ThemeIcon } from "../icons"
 import { checkoutPathFor, useKibisisCart } from "../layout/shell/cart-context"
 
-function money(amount: number, currency: string | undefined) {
-  const formatted = amount.toLocaleString("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-
-  if (!currency || currency.toLowerCase() === "try") {
-    return `${formatted} TL`
-  }
-
-  return `${formatted} ${currency.toUpperCase()}`
-}
-
-function sellerName(item: HttpTypes.StoreCartLineItem) {
+function sellerName(item: HttpTypes.StoreCartLineItem, t: Translate) {
   const value = item.product?.metadata?.seller_name
   if (typeof value === "string" && value.trim()) {
     return value.trim()
   }
 
-  return "Mağaza"
+  return t("cart.store")
 }
 
 function variantLabel(item: HttpTypes.StoreCartLineItem) {
@@ -42,7 +31,8 @@ function variantLabel(item: HttpTypes.StoreCartLineItem) {
 
 function sessionLabel(
   cart: HttpTypes.StoreCart | null,
-  customer: HttpTypes.StoreCustomer | null
+  customer: HttpTypes.StoreCustomer | null,
+  t: Translate
 ) {
   if (customer) {
     const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ")
@@ -50,10 +40,10 @@ function sessionLabel(
   }
 
   if (cart?.email) {
-    return `Misafir · ${cart.email}`
+    return `${t("cart.guest")} · ${cart.email}`
   }
 
-  return "Misafir oturumu"
+  return t("cart.guest_session")
 }
 
 function CartLine({
@@ -64,6 +54,8 @@ function CartLine({
   currency: string
 }) {
   const { updateQuantity, pending } = useKibisisCart()
+  const t = useT()
+  const money = useMoney()
   const current = item.total ?? (item.unit_price ?? 0) * item.quantity
   const original = item.original_total ?? current
   const saving = original > current ? original - current : 0
@@ -99,7 +91,7 @@ function CartLine({
               disabled={pending}
               className="text-slate-500 hover:text-red-500 font-bold disabled:opacity-40"
               onClick={() => updateQuantity(item.id, item.quantity - 1)}
-              aria-label="Adedi azalt"
+              aria-label={t("cart.decrease")}
             >
               {item.quantity === 1 ? (
                 <ThemeIcon name="trash" className="h-3.5 w-3.5" />
@@ -113,7 +105,7 @@ function CartLine({
               disabled={pending}
               className="text-orange-600 font-bold disabled:opacity-40"
               onClick={() => updateQuantity(item.id, item.quantity + 1)}
-              aria-label="Adedi artır"
+              aria-label={t("cart.increase")}
             >
               +
             </button>
@@ -131,7 +123,7 @@ function CartLine({
         </div>
         {saving > 0 ? (
           <div className="text-[11px] font-bold text-emerald-700">
-            {money(saving, currency)} kazanç
+            {t("cart.saved", { amount: money(saving, currency) })}
           </div>
         ) : null}
       </div>
@@ -146,6 +138,8 @@ export default function KibisisCartTemplate({
   cart: HttpTypes.StoreCart | null
   customer: HttpTypes.StoreCustomer | null
 }) {
+  const t = useT()
+  const money = useMoney()
   const router = useRouter()
   const { clearCart, pending } = useKibisisCart()
   const [code, setCode] = useState("")
@@ -158,7 +152,7 @@ export default function KibisisCartTemplate({
   const groups = new Map<string, HttpTypes.StoreCartLineItem[]>()
 
   for (const item of items) {
-    const seller = sellerName(item)
+    const seller = sellerName(item, t)
     const group = groups.get(seller) ?? []
     group.push(item)
     groups.set(seller, group)
@@ -193,7 +187,7 @@ export default function KibisisCartTemplate({
       setCode("")
       router.refresh()
     } catch (error) {
-      setCouponError(error instanceof Error ? error.message : "Kupon uygulanamadı")
+      setCouponError(error instanceof Error ? error.message : t("cart.coupon_apply_failed"))
     } finally {
       setCouponPending(false)
     }
@@ -210,7 +204,7 @@ export default function KibisisCartTemplate({
       await applyPromotions(codes)
       router.refresh()
     } catch (error) {
-      setCouponError(error instanceof Error ? error.message : "Kupon kaldırılamadı")
+      setCouponError(error instanceof Error ? error.message : t("cart.coupon_remove_failed"))
     } finally {
       setCouponPending(false)
     }
@@ -222,13 +216,13 @@ export default function KibisisCartTemplate({
         <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900">Sepetim</h1>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900">{t("cart.title")}</h1>
               <span className="text-xs font-semibold text-slate-500">
-                ({count} ürün)
+                {t("cart.items_count", { count })}
               </span>
             </div>
             <p className="text-[11px] font-semibold text-slate-500 mt-1">
-              Oturum: {sessionLabel(cart, customer)}
+              {t("cart.session", { session: sessionLabel(cart, customer, t) })}
             </p>
           </div>
           {count > 0 ? (
@@ -238,7 +232,7 @@ export default function KibisisCartTemplate({
               className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 disabled:opacity-40"
               onClick={clearCart}
             >
-              <span>Ürünleri sil</span>
+              <span>{t("cart.remove_items")}</span>
               <ThemeIcon name="trash" className="h-3.5 w-3.5" />
             </button>
           ) : null}
@@ -249,15 +243,15 @@ export default function KibisisCartTemplate({
         {count === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
             <ThemeIcon name="shopping-bag" className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-            <p className="font-bold text-slate-800">Sepetiniz şu an boş</p>
+            <p className="font-bold text-slate-800">{t("cart.empty")}</p>
             <p className="text-xs text-slate-500 mt-1">
-              Eklediğiniz ürünler bu oturumun sepetinde görünür.
+              {t("cart.empty_hint")}
             </p>
             <LocalizedClientLink
               href="/"
               className="inline-flex mt-5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm px-5 py-3 rounded-xl"
             >
-              Alışverişe dön
+              {t("cart.continue")}
             </LocalizedClientLink>
           </div>
         ) : (
@@ -267,14 +261,14 @@ export default function KibisisCartTemplate({
                 <div className="flex items-center justify-between text-xs">
                   <div className="font-bold text-slate-900 flex items-center gap-1.5">
                     <ThemeIcon name="tag" className="h-3.5 w-3.5 text-orange-600" />
-                    Kuponlarım ({promotions.length})
+                    {t("cart.coupons", { count: promotions.length })}
                   </div>
                 </div>
                 <form onSubmit={applyCode} className="flex gap-2">
                   <input
                     value={code}
                     onChange={(event) => setCode(event.target.value)}
-                    placeholder="Kupon kodu"
+                    placeholder={t("cart.coupon_code")}
                     className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs focus:outline-none focus:border-orange-500 focus:bg-white"
                   />
                   <button
@@ -282,7 +276,7 @@ export default function KibisisCartTemplate({
                     disabled={couponPending || !code.trim()}
                     className="px-4 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold disabled:opacity-40"
                   >
-                    Ekle
+                    {t("cart.apply")}
                   </button>
                 </form>
                 {couponError ? (
@@ -296,7 +290,7 @@ export default function KibisisCartTemplate({
                     <div>
                       <div className="font-black text-amber-950">{promotion.code}</div>
                       {promotion.is_automatic ? (
-                        <div className="text-[11px] text-slate-500 mt-0.5">Otomatik uygulandı</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">{t("cart.auto_applied")}</div>
                       ) : null}
                     </div>
                     {!promotion.is_automatic && promotion.code ? (
@@ -306,7 +300,7 @@ export default function KibisisCartTemplate({
                         className="px-4 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-bold text-xs"
                         onClick={() => removeCode(promotion.code as string)}
                       >
-                        Kaldır
+                        {t("cart.remove")}
                       </button>
                     ) : null}
                   </div>
@@ -320,11 +314,11 @@ export default function KibisisCartTemplate({
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 text-xs">
                     <div className="font-bold text-slate-900">
-                      Satıcı: <strong>{seller}</strong>
+                      {t("common.seller")}: <strong>{seller}</strong>
                     </div>
                     {hasShipping && shipping === 0 ? (
                       <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 text-[11px]">
-                        Kargo bedava
+                        {t("common.free_shipping")}
                       </span>
                     ) : null}
                   </div>
@@ -339,14 +333,14 @@ export default function KibisisCartTemplate({
               <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-4">
                 <div className="space-y-1">
                   <div className="text-xs font-black text-slate-400 uppercase tracking-wider">
-                    Seçilen ürünler ({count})
+                    {t("cart.selected", { count })}
                   </div>
                   <div className="text-3xl font-black text-slate-950">
                     {money(total, currency)}
                   </div>
                   {saving > 0 ? (
                     <div className="text-xs text-emerald-700 font-bold">
-                      {money(saving, currency)} kazancın var
+                      {t("cart.you_save", { amount: money(saving, currency) })}
                     </div>
                   ) : null}
                 </div>
@@ -354,31 +348,31 @@ export default function KibisisCartTemplate({
                   href={checkoutPathFor(cart)}
                   className="flex w-full items-center justify-center py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black text-sm tracking-wide shadow-md"
                 >
-                  Alışverişi tamamla
+                  {t("cart.checkout")}
                 </LocalizedClientLink>
                 <div className="pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-600">
                   <div className="flex justify-between">
-                    <span>Ürünler</span>
+                    <span>{t("cart.items")}</span>
                     <strong className="text-slate-900">{money(itemSubtotal, currency)}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span>Kargo</span>
+                    <span>{t("cart.shipping")}</span>
                     <strong className="text-slate-900">
                       {!hasShipping
-                        ? "Ödeme adımında"
+                        ? t("cart.at_checkout")
                         : shipping === 0
-                          ? "Bedava"
+                          ? t("cart.free")
                           : money(shipping, currency)}
                     </strong>
                   </div>
                   {discount > 0 ? (
                     <div className="flex justify-between text-emerald-700 font-bold">
-                      <span>İndirim</span>
+                      <span>{t("cart.discount")}</span>
                       <span>-{money(discount, currency)}</span>
                     </div>
                   ) : null}
                   <div className="flex justify-between pt-2 border-t text-sm font-black text-slate-950">
-                    <span>Toplam</span>
+                    <span>{t("cart.total")}</span>
                     <span>{money(total, currency)}</span>
                   </div>
                 </div>
