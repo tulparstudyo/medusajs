@@ -99,6 +99,7 @@ export const en = {
   "listing.sort_by": "Sort by:",
   "listing.brand": "Brand",
   "listing.filters": "Filters",
+  "listing.subcategories": "Categories",
   "listing.clear": "Clear",
   "listing.search_placeholder": "Search products",
   "listing.no_results": "No products match these filters.",

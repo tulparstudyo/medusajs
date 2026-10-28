@@ -15,6 +15,7 @@ export type ImportedVariant = {
   attributes: ImportedAttribute[]
   sortOrder: number
   inStock: boolean
+  extras?: VariantExtras
 }
 
 export type ImportedProduct = {
@@ -31,6 +32,58 @@ export type ImportedProduct = {
   variants: ImportedVariant[]
   images: string[]
   colorUrls: string[]
+  extras?: ProductExtras
+}
+
+/** A plain price of one currency. Amounts are major units, e.g. "1299.90". */
+export type PriceEntry = {
+  currency: string
+  amount: string
+  compareAt: string | null
+}
+
+export type PhysicalFields = {
+  weight?: number | null
+  length?: number | null
+  height?: number | null
+  width?: number | null
+  material?: string | null
+  originCountry?: string | null
+  hsCode?: string | null
+  midCode?: string | null
+}
+
+/**
+ * Fields a full product document carries and a shop page does not. A field
+ * left undefined keeps the importer's default.
+ */
+export type ProductExtras = PhysicalFields & {
+  subtitle?: string | null
+  description?: string | null
+  handle?: string | null
+  status?: "draft" | "published"
+  discountable?: boolean
+  categoryIds?: string[]
+  collectionId?: string | null
+  typeId?: string | null
+  tagIds?: string[]
+  metadata?: Record<string, unknown>
+}
+
+export type VariantExtras = PhysicalFields & {
+  sku?: string | null
+  title?: string | null
+  ean?: string | null
+  upc?: string | null
+  /** Replaces `price`: every currency the variant is sold in. */
+  prices?: PriceEntry[]
+  /** Exact stock per chosen location instead of the import default. */
+  quantity?: number | null
+  manageInventory?: boolean
+  allowBackorder?: boolean
+  /** Positions in the product image list shown for this variant. */
+  imageIndexes?: number[]
+  metadata?: Record<string, unknown>
 }
 
 export type ImportResult = {

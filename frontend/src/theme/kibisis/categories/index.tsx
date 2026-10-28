@@ -1,5 +1,6 @@
 import { categoryTreeIds } from "@lib/data/categories"
 import { listCollections } from "@lib/data/collections"
+import { listProducts } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -27,6 +28,37 @@ function ancestors(category: HttpTypes.StoreProductCategory) {
 function pageNumberOf(page?: string) {
   const parsed = Number.parseInt(page || "1", 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
+async function loadStockedChildren(
+  category: HttpTypes.StoreProductCategory,
+  countryCode: string
+): Promise<ListingChild[]> {
+  const children = (category.category_children ?? []).filter(
+    (child) => child.id && child.name && child.handle
+  )
+
+  const counted = await Promise.all(
+    children.map(async (child) => {
+      try {
+        const { response } = await listProducts({
+          countryCode,
+          queryParams: {
+            limit: 1,
+            fields: "id",
+            category_id: categoryTreeIds(child),
+          },
+        })
+        return response.count > 0 ? child : null
+      } catch {
+        return null
+      }
+    })
+  )
+
+  return counted.flatMap((child) =>
+    child ? [{ id: child.id, name: child.name, handle: child.handle }] : []
+  )
 }
 
 async function loadBrands(): Promise<ListingBrand[]> {
@@ -63,26 +95,20 @@ export default async function CategoryTemplate({
   const { t } = await getKibiI18n()
   const pageNumber = pageNumberOf(page)
   const trail = ancestors(category)
-  const children: ListingChild[] = (category.category_children ?? [])
-    .filter((child) => child.id && child.name && child.handle)
-    .map((child) => ({
-      id: child.id,
-      name: child.name,
-      handle: child.handle,
-    }))
 
   const request: ListingRequest = {
     countryCode,
-    categoryIds: categoryTreeIds(category),
+    categoryIds: [category.id],
     collectionIds,
     optionValueIds: optionValueIds ?? [],
     ...(q ? { q } : {}),
     ...(sortBy ? { sortBy } : {}),
   }
 
-  const [listed, brands] = await Promise.all([
+  const [listed, brands, children] = await Promise.all([
     loadListingPage(request, pageNumber),
     loadBrands(),
+    loadStockedChildren(category, countryCode),
   ])
 
   return (

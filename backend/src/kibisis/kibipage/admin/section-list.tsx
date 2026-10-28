@@ -23,6 +23,7 @@ import {
   FastLinkVariant,
   isBannerSection,
   isFastLinksSection,
+  isHtmlContentSection,
   isIconBoxSection,
   isProductSection,
   PRODUCT_SOURCE_LABELS,
@@ -85,6 +86,11 @@ function summary(section: SectionDTO) {
     const items = section.settings.items
     const count = Array.isArray(items) ? items.length : 0
     return `${label} · ${count} kutu`
+  }
+
+  if (isHtmlContentSection(section.type)) {
+    const html = typeof section.settings.html === "string" ? section.settings.html.trim() : ""
+    return html ? `${label} · dolu` : `${label} · boş`
   }
 
   if (isProductSection(section.type)) {

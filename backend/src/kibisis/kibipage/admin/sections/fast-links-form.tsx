@@ -1,7 +1,7 @@
 import { Button, Input, Label, Select, Switch, Text } from "@medusajs/ui"
 import { useState } from "react"
 
-import { IconSelect } from "../icon-select"
+import SectionImageField from "../section-image-field"
 import {
   emptyFastLinks,
   FAST_LINK_VARIANT_LABELS,
@@ -9,7 +9,6 @@ import {
   FastLinkItem,
   FastLinksSettings,
   FastLinkVariant,
-  isSectionIcon,
   SectionSettings,
 } from "../../types"
 
@@ -41,7 +40,7 @@ export function readFastLinks(
           id: typeof row.id === "string" && row.id ? row.id : crypto.randomUUID(),
           label: typeof row.label === "string" ? row.label : "",
           href: typeof row.href === "string" && row.href ? row.href : "/",
-          icon: isSectionIcon(row.icon) ? row.icon : "",
+          icon: typeof row.icon === "string" ? row.icon : "",
           accent: row.accent === true,
         },
       ]
@@ -58,9 +57,11 @@ const emptyItem = (): FastLinkItem => ({
 })
 
 export default function FastLinksForm({
+  sectionId,
   value,
   onChange,
 }: {
+  sectionId: string
   value: FastLinksSettings
   onChange: (next: FastLinksSettings) => void
 }) {
@@ -196,14 +197,12 @@ export default function FastLinksForm({
                   id={panelId}
                   className="flex flex-col gap-y-3 border-t border-ui-border-base px-3 py-3"
                 >
-                  <div className="flex flex-col gap-y-2">
-                    <Label size="small">İkon</Label>
-                    <IconSelect
-                      allowEmpty
-                      value={item.icon}
-                      onChange={(icon) => updateItem(item.id, { icon })}
-                    />
-                  </div>
+                  <SectionImageField
+                    sectionId={sectionId}
+                    label="İkon"
+                    value={item.icon}
+                    onChange={(icon) => updateItem(item.id, { icon })}
+                  />
                   <div className="flex flex-col gap-y-2">
                     <Label htmlFor={`fast-label-${item.id}`} size="small">
                       Metin

@@ -1,0 +1,36 @@
+import {
+  getPageSections,
+  STORE_PAGE_LABELS,
+  StorePageKey,
+} from "@lib/data/pages"
+
+import SectionSlot from "../home/section-slot"
+
+export default async function KibisisStaticPage({
+  pageKey,
+  countryCode,
+}: {
+  pageKey: StorePageKey
+  countryCode: string
+}) {
+  const page = await getPageSections(pageKey)
+
+  return (
+    <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+      <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">
+        {STORE_PAGE_LABELS[pageKey]}
+      </h1>
+      {page.sections.length > 0 ? (
+        page.sections.map((section) => (
+          <SectionSlot
+            key={section.id}
+            section={section}
+            countryCode={countryCode}
+          />
+        ))
+      ) : (
+        <p className="text-sm text-slate-500">Bu sayfada henüz içerik yok.</p>
+      )}
+    </main>
+  )
+}

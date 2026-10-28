@@ -1,6 +1,7 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import {
   batchInventoryItemLevelsWorkflow,
+  batchVariantImagesWorkflow,
   createProductVariantsWorkflow,
   createProductsWorkflow,
   deleteProductVariantsWorkflow,
@@ -16,6 +17,7 @@ import KibigroupModuleService from "../kibigroup/service"
 import { ImportException } from "./errors"
 import {
   deleteImages,
+  DownloadedImage,
   downloadImages,
   sameSources,
   StoredImages,
@@ -25,11 +27,39 @@ import {
 } from "./images"
 import { slugify } from "./lib/slug"
 import { compareMoney } from "./money"
-import { mergePrices, PriceInput, PriceRow, pricesFor } from "./prices"
+import {
+  mergeEntryPrices,
+  mergePrices,
+  PriceInput,
+  PriceRow,
+  pricesFor,
+  pricesOfEntries,
+} from "./prices"
 import KibiimportModuleService from "./service"
-import { ImportedProduct, ImportedVariant, ImportResult, StockResult } from "./types"
+import {
+  ImportedProduct,
+  ImportedVariant,
+  ImportResult,
+  PhysicalFields,
+  PriceEntry,
+  StockResult,
+} from "./types"
 
 export const IMPORT_STOCK = 3
+
+/**
+ * ImageSet is the images a product should end up with. `sources` identify
+ * them, so an unchanged set is not uploaded again; `load` reads the bytes.
+ */
+export type ImageSet = {
+  sources: string[]
+  load: () => Promise<DownloadedImage[]>
+}
+
+export type WriteOptions = {
+  /** Defaults to downloading `product.images`. "keep" leaves the product's images untouched. */
+  images?: ImageSet | "keep"
+}
 
 type Graph = {
   graph: (args: {
@@ -79,7 +109,8 @@ export async function writeProduct(
   product: ImportedProduct,
   categoryId: string,
   locationIds: string[] = [],
-  currencyCode: string | null = null
+  currencyCode: string | null = null,
+  options: WriteOptions = {}
 ): Promise<ImportResult> {
   const color = product.color?.trim() ?? ""
 
@@ -89,7 +120,8 @@ export async function writeProduct(
 
   const context = await loadContext(container, categoryId)
   const currency = pickCurrency(context, currencyCode)
-  const warnings = currencyWarnings(product.currency, currency)
+  assertEntryCurrencies(product, context)
+  const warnings = hasPriceEntries(product) ? [] : currencyWarnings(product.currency, currency)
   const existingId = await findExistingProduct(container, service, product, color)
   const existing = existingId ? await loadProduct(container, existingId) : null
 
@@ -97,12 +129,21 @@ export async function writeProduct(
     throw new ImportException("Kayıtlı ürün bulunamadı.")
   }
 
+  const plan = options.images ?? remoteImages(product.images)
   const previous = storedImagesOf(existing?.metadata)
-  const kept = previous && sameSources(previous.sources, product.images) ? previous : null
-  const uploaded = kept
-    ? null
-    : await uploadImages(container, product.code, await downloadImages(product.images))
-  const stored: StoredImages = kept ?? { sources: product.images, keys: uploaded?.keys ?? [] }
+  let kept: StoredImages | null = null
+  let uploaded: UploadedImages | null = null
+  let sources: string[] = []
+
+  if (plan === "keep") {
+    kept = previous ?? { sources: [], keys: [] }
+  } else {
+    sources = plan.sources
+    kept = previous && sameSources(previous.sources, sources) ? previous : null
+    uploaded = kept ? null : await uploadImages(container, product.code, await plan.load())
+  }
+
+  const stored: StoredImages = kept ?? { sources, keys: uploaded?.keys ?? [] }
 
   let written: WrittenCatalog
 
@@ -133,6 +174,7 @@ export async function writeProduct(
     .rememberImported(written.productId, product.code, color)
 
   const stock = await stockVariants(container, product, written.productId, locationIds)
+  warnings.push(...(await linkVariantImages(container, product, written.productId)))
 
   return {
     ...written,
@@ -181,7 +223,12 @@ async function stockVariants(
       filters: { product_id: productId },
     }),
   ])
-  const inStock = new Map(product.variants.map((variant) => [variant.barcode, variant.inStock]))
+  const wanted = new Map(
+    product.variants.map((variant) => [
+      variant.barcode,
+      { inStock: variant.inStock, quantity: exactQuantity(variant) },
+    ])
+  )
   const create: { inventory_item_id: string; location_id: string; stocked_quantity: number }[] = []
   const update: {
     id: string
@@ -200,11 +247,14 @@ async function stockVariants(
       return typeof itemId === "string" ? [{ itemId, levels: levelsOf(record?.inventory) }] : []
     })
 
-    if (!inStock.has(barcode) || !items.length) {
+    const target = wanted.get(barcode)
+
+    if (!target || !items.length) {
       continue
     }
 
-    const available = inStock.get(barcode) === true
+    const exact = target.quantity
+    const available = exact === null ? target.inStock : exact > 0
 
     if (available) {
       stocked += 1
@@ -220,17 +270,24 @@ async function stockVariants(
           create.push({
             inventory_item_id: item.itemId,
             location_id: locationId,
-            stocked_quantity: available ? IMPORT_STOCK : 0,
+            stocked_quantity: exact ?? (available ? IMPORT_STOCK : 0),
           })
           continue
         }
 
-        if (available && level.stockedQuantity < IMPORT_STOCK) {
+        const next =
+          exact !== null
+            ? exact
+            : available && level.stockedQuantity < IMPORT_STOCK
+              ? IMPORT_STOCK
+              : level.stockedQuantity
+
+        if (next !== level.stockedQuantity) {
           update.push({
             id: level.id,
             inventory_item_id: item.itemId,
             location_id: locationId,
-            stocked_quantity: IMPORT_STOCK,
+            stocked_quantity: next,
           })
         }
       }
@@ -254,6 +311,126 @@ async function stockVariants(
     stocked,
     soldOut,
   }
+}
+
+function exactQuantity(variant: ImportedVariant): number | null {
+  const quantity = variant.extras?.quantity
+
+  if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
+    return null
+  }
+
+  return Math.max(0, Math.floor(quantity))
+}
+
+/**
+ * LinkVariantImages shows each variant the product images its document
+ * lists by position. Variants without a list keep their images. A failure
+ * is reported, the product itself is already saved.
+ */
+async function linkVariantImages(
+  container: MedusaContainer,
+  product: ImportedProduct,
+  productId: string
+): Promise<string[]> {
+  const wanted = product.variants.filter((variant) => variant.extras?.imageIndexes !== undefined)
+
+  if (!wanted.length) {
+    return []
+  }
+
+  try {
+    const { data } = await graph(container).graph({
+      entity: "product",
+      fields: ["images.id", "images.rank", "variants.id", "variants.barcode"],
+      filters: { id: productId },
+    })
+    const row = data[0]
+    const imageIds = asArray(row?.images)
+      .flatMap((image) => {
+        const record = asRecord(image)
+        return typeof record?.id === "string"
+          ? [{ id: record.id, rank: Number(record.rank ?? 0) }]
+          : []
+      })
+      .sort((left, right) => left.rank - right.rank)
+      .map((image) => image.id)
+    const linked = await linkedImages(
+      container,
+      asArray(row?.variants).flatMap((variant) => {
+        const id = asRecord(variant)?.id
+        return typeof id === "string" ? [id] : []
+      })
+    )
+    const variants = new Map(
+      asArray(row?.variants).flatMap((variant): [string, { id: string; images: string[] }][] => {
+        const record = asRecord(variant)
+
+        if (typeof record?.id !== "string" || typeof record.barcode !== "string") {
+          return []
+        }
+
+        return [[record.barcode, { id: record.id, images: linked.get(record.id) ?? [] }]]
+      })
+    )
+    const warnings: string[] = []
+
+    for (const variant of wanted) {
+      const current = variants.get(variant.barcode)
+
+      if (!current) {
+        continue
+      }
+
+      const indexes = variant.extras?.imageIndexes ?? []
+      const missing = indexes.filter((index) => !imageIds[index])
+      const desired = unique(indexes.flatMap((index) => (imageIds[index] ? [imageIds[index]] : [])))
+      const add = desired.filter((id) => !current.images.includes(id))
+      const remove = current.images.filter((id) => !desired.includes(id))
+
+      if (missing.length) {
+        warnings.push(`Varyant ${variant.barcode}: ${missing.map((index) => index + 1).join(", ")}. görsel bulunamadı.`)
+      }
+
+      if (add.length || remove.length) {
+        await batchVariantImagesWorkflow(container).run({
+          input: { variant_id: current.id, add, remove },
+        })
+      }
+    }
+
+    return warnings
+  } catch (error) {
+    return [`Varyant görselleri bağlanamadı: ${(error as Error).message}`]
+  }
+}
+
+/**
+ * LinkedImages reads the images assigned to each variant. Query's
+ * `variants.images` adds the product's unassigned images to every variant,
+ * so it cannot tell what is linked.
+ */
+async function linkedImages(container: MedusaContainer, variantIds: string[]): Promise<Map<string, string[]>> {
+  const links = new Map<string, string[]>()
+
+  if (!variantIds.length) {
+    return links
+  }
+
+  const database = container.resolve(ContainerRegistrationKeys.PG_CONNECTION) as {
+    raw: (sql: string, bindings: unknown[]) => Promise<{ rows: { variant_id: string; image_id: string }[] }>
+  }
+  const { rows } = await database.raw(
+    `SELECT variant_id, image_id FROM product_variant_product_image
+     WHERE deleted_at IS NULL AND variant_id IN (${variantIds.map(() => "?").join(", ")})`,
+    variantIds
+  )
+
+  for (const row of rows) {
+    links.set(row.variant_id, [...(links.get(row.variant_id) ?? []), row.image_id])
+  }
+
+  return links
 }
 
 function levelsOf(
@@ -433,24 +610,27 @@ async function createCatalog(
   const axes = axisNames(product)
   const handle = await availableHandle(container, product, color)
   const imageUrls = uploaded?.urls ?? []
+  const extras = product.extras ?? {}
   const { result } = await createProductsWorkflow(container).run({
     input: {
       products: [
         {
           title: product.name,
           handle,
-          subtitle: product.brand ?? undefined,
-          description: describe(product),
-          status: ProductStatus.PUBLISHED,
+          subtitle: subtitleOf(product),
+          description: extras.description ?? describe(product),
+          status: extras.status === "draft" ? ProductStatus.DRAFT : ProductStatus.PUBLISHED,
           thumbnail: imageUrls[0],
           images: imageUrls.map((url) => ({ url })),
           shipping_profile_id: context.shippingProfileId,
-          category_ids: [categoryId],
+          category_ids: unique([categoryId, ...(extras.categoryIds ?? [])]),
           sales_channels: context.salesChannelIds.map((id) => ({ id })),
           metadata: metadataOf(product, color, stored),
+          ...taxonomyInput(product),
+          ...physicalInput(extras),
           options: axes.map((axis) => ({ title: axis, values: optionValues(product, axis) })),
           variants: product.variants.map((variant) =>
-            variantInput(product, variant, axes, pricesFor(variant.price, currency))
+            variantInput(product, variant, axes, currency, initialPrices(variant, currency))
           ),
         },
       ],
@@ -485,6 +665,7 @@ async function updateCatalog(
   stored: StoredImages
 ): Promise<WrittenCatalog> {
   const counts = await syncVariants(container, product, existing, currency)
+  const extras = product.extras ?? {}
 
   await updateProductsWorkflow(container).run({
     input: {
@@ -492,15 +673,20 @@ async function updateCatalog(
         {
           id: existing.id,
           title: product.name,
-          subtitle: product.brand ?? undefined,
-          description: describe(product),
+          subtitle: subtitleOf(product),
+          description: extras.description ?? describe(product),
+          ...(extras.status
+            ? { status: extras.status === "draft" ? ProductStatus.DRAFT : ProductStatus.PUBLISHED }
+            : {}),
           ...(uploaded
             ? {
                 thumbnail: uploaded.urls[0] ?? null,
                 images: uploaded.urls.map((url) => ({ url })),
               }
             : {}),
-          category_ids: unique([...existing.categoryIds, categoryId]),
+          category_ids: unique([...existing.categoryIds, categoryId, ...(extras.categoryIds ?? [])]),
+          ...taxonomyInput(product),
+          ...physicalInput(extras),
           metadata: {
             ...(existing.metadata ?? {}),
             ...metadataOf(product, color, stored),
@@ -563,14 +749,20 @@ async function syncVariants(
     const current = byBarcode.get(variant.barcode)
 
     if (!current) {
-      const next = variantInput(product, variant, axes, pricesFor(variant.price, currency))
-      creating.push({ ...next, product_id: existing.id, manage_inventory: true })
+      const next = variantInput(product, variant, axes, currency, initialPrices(variant, currency))
+      creating.push({ manage_inventory: true, ...next, product_id: existing.id })
       continue
     }
 
     kept.add(current.id)
-    const prices = mergePrices(current.prices, variant.price, currency)
-    updating.push({ id: current.id, ...variantInput(product, variant, axes, prices, current.metadata) })
+    const entries = priceEntriesOf(variant)
+    const prices = entries
+      ? mergeEntryPrices(current.prices, entries)
+      : mergePrices(current.prices, variant.price, currency)
+    updating.push({
+      id: current.id,
+      ...variantInput(product, variant, axes, currency, prices, current.metadata),
+    })
   }
 
   if (creating.length) {
@@ -635,30 +827,131 @@ function variantInput(
   product: ImportedProduct,
   variant: ImportedVariant,
   axes: string[],
+  currency: string,
   prices: PriceInput[] | undefined,
   metadata: Record<string, unknown> | null = null
 ) {
   const values = axes.map((axis) => optionValue(variant, axis))
-  const compareAt =
-    variant.compareAtPrice &&
-    variant.price &&
-    compareMoney(variant.compareAtPrice, variant.price) > 0
-      ? variant.compareAtPrice
-      : null
+  const extras = variant.extras ?? {}
+  const entries = priceEntriesOf(variant)
+  const primary = entries?.find((entry) => entry.currency === currency)
+  const compareAt = entries
+    ? discountedFrom(primary?.amount ?? null, primary?.compareAt ?? null)
+    : discountedFrom(variant.price, variant.compareAtPrice)
 
   return {
-    title: values.join(" / "),
-    sku: variant.barcode,
+    title: extras.title?.trim() || values.join(" / "),
+    sku: extras.sku?.trim() || variant.barcode,
     barcode: variant.barcode,
+    ...(extras.ean !== undefined ? { ean: extras.ean } : {}),
+    ...(extras.upc !== undefined ? { upc: extras.upc } : {}),
+    ...(extras.manageInventory !== undefined ? { manage_inventory: extras.manageInventory } : {}),
+    ...(extras.allowBackorder !== undefined ? { allow_backorder: extras.allowBackorder } : {}),
+    ...physicalInput(extras),
     options: Object.fromEntries(axes.map((axis, index) => [axis, values[index]])),
     ...(prices?.length ? { prices } : {}),
     metadata: {
       ...(metadata ?? {}),
+      ...(extras.metadata ?? {}),
       compare_at_price: compareAt,
+      ...(entries ? { compare_at_prices: compareAtPrices(entries) } : {}),
       item_number: variant.sku,
       tax_rate: product.taxRate,
     },
   }
+}
+
+function discountedFrom(price: string | null, compareAt: string | null): string | null {
+  return compareAt && price && compareMoney(compareAt, price) > 0 ? compareAt : null
+}
+
+function compareAtPrices(entries: PriceEntry[]): Record<string, string> {
+  return Object.fromEntries(
+    entries.flatMap((entry) => {
+      const compareAt = discountedFrom(entry.amount, entry.compareAt)
+      return compareAt ? [[entry.currency, compareAt]] : []
+    })
+  )
+}
+
+function priceEntriesOf(variant: ImportedVariant): PriceEntry[] | null {
+  const entries = variant.extras?.prices
+  return entries?.length ? entries : null
+}
+
+function initialPrices(variant: ImportedVariant, currency: string): PriceInput[] | undefined {
+  const entries = priceEntriesOf(variant)
+  return entries ? pricesOfEntries(entries) : pricesFor(variant.price, currency)
+}
+
+function hasPriceEntries(product: ImportedProduct): boolean {
+  return product.variants.some((variant) => priceEntriesOf(variant) !== null)
+}
+
+function assertEntryCurrencies(product: ImportedProduct, context: StoreContext): void {
+  const unknown = unique(
+    product.variants
+      .flatMap((variant) => priceEntriesOf(variant) ?? [])
+      .map((entry) => entry.currency)
+      .filter((code) => !context.currencyCodes.includes(code))
+  )
+
+  if (unknown.length) {
+    throw new ImportException(
+      `${unknown.map((code) => code.toUpperCase()).join(", ")} para birimi mağazada tanımlı değil.`
+    )
+  }
+}
+
+function subtitleOf(product: ImportedProduct): string | null | undefined {
+  const subtitle = product.extras?.subtitle
+  return subtitle !== undefined ? subtitle : product.brand ?? undefined
+}
+
+function taxonomyInput(product: ImportedProduct) {
+  const extras = product.extras ?? {}
+
+  return {
+    ...(extras.discountable !== undefined ? { discountable: extras.discountable } : {}),
+    ...(extras.collectionId !== undefined ? { collection_id: extras.collectionId } : {}),
+    ...(extras.typeId !== undefined ? { type_id: extras.typeId } : {}),
+    ...(extras.tagIds !== undefined ? { tag_ids: extras.tagIds } : {}),
+  }
+}
+
+function physicalInput(fields: PhysicalFields) {
+  const input: Record<string, string | number | null> = {}
+  const pairs: [keyof PhysicalFields, string][] = [
+    ["weight", "weight"],
+    ["length", "length"],
+    ["height", "height"],
+    ["width", "width"],
+    ["material", "material"],
+    ["originCountry", "origin_country"],
+    ["hsCode", "hs_code"],
+    ["midCode", "mid_code"],
+  ]
+
+  for (const [key, column] of pairs) {
+    if (fields[key] !== undefined) {
+      input[column] = fields[key] ?? null
+    }
+  }
+
+  return input as {
+    weight?: number | null
+    length?: number | null
+    height?: number | null
+    width?: number | null
+    material?: string | null
+    origin_country?: string | null
+    hs_code?: string | null
+    mid_code?: string | null
+  }
+}
+
+function remoteImages(urls: string[]): ImageSet {
+  return { sources: urls, load: () => downloadImages(urls) }
 }
 
 async function loadProduct(container: MedusaContainer, id: string): Promise<ProductRow | null> {
@@ -790,7 +1083,8 @@ async function availableHandle(
   product: ImportedProduct,
   color: string
 ): Promise<string> {
-  const base = `${slugify(product.code)}-${slugify(color)}`.slice(0, 100)
+  const requested = product.extras?.handle?.trim()
+  const base = (requested ? slugify(requested) : `${slugify(product.code)}-${slugify(color)}`).slice(0, 100)
   const withId = `${base}-${slugify(product.externalId)}`.slice(0, 120)
 
   if (!(await handleExists(container, base))) {
@@ -902,6 +1196,7 @@ function metadataOf(
   images: StoredImages
 ): Record<string, unknown> {
   return {
+    ...(product.extras?.metadata ?? {}),
     kibiimport: {
       source: product.source,
       external_id: product.externalId,

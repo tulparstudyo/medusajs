@@ -52,18 +52,34 @@ export const getCategoryByHandle = async (categoryHandle: string[]) => {
     ...(await getCatalogCacheOptions("categories")),
   }
 
-  return sdk.client
-    .fetch<HttpTypes.StoreProductCategoryListResponse>(
-      `/store/product-categories`,
-      {
-        query: {
-          fields:
-            "*category_children, *category_children.category_children, *category_children.category_children.category_children, *parent_category, *parent_category.parent_category, *products",
-          handle,
-        },
-        next,
-        cache: "force-cache",
-      }
-    )
-    .then(({ product_categories }) => product_categories[0])
+  const fetchCategory = (query: Record<string, unknown>) =>
+    sdk.client
+      .fetch<HttpTypes.StoreProductCategoryListResponse>(
+        `/store/product-categories`,
+        { query: { handle, ...query }, next, cache: "force-cache" }
+      )
+      .then(({ product_categories }) => product_categories[0])
+
+  // Nested `category_children.*` field paths come back empty, and combining
+  // `include_descendants_tree` with `include_ancestors_tree` drops the tree on
+  // root categories, so the parents and the subtree are fetched separately.
+  const [category, tree] = await Promise.all([
+    fetchCategory({
+      fields:
+        "*category_children, *parent_category, *parent_category.parent_category, *products",
+    }),
+    fetchCategory({
+      fields: "id, *category_children",
+      include_descendants_tree: true,
+    }),
+  ])
+
+  if (!category) {
+    return category
+  }
+
+  return {
+    ...category,
+    category_children: tree?.category_children ?? category.category_children,
+  }
 }

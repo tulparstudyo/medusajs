@@ -160,19 +160,6 @@ export default function ListingControls({
           {description ? (
             <p className="text-xs text-slate-500 max-w-2xl">{description}</p>
           ) : null}
-          {childrenCategories.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {childrenCategories.map((child) => (
-                <LocalizedClientLink
-                  key={child.id}
-                  href={`/categories/${child.handle}`}
-                  className="px-3 py-1 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:border-orange-300 hover:text-orange-600"
-                >
-                  {child.name}
-                </LocalizedClientLink>
-              ))}
-            </div>
-          ) : null}
         </div>
         <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold shrink-0">
           <span>⇅ {t("listing.sort_by")}</span>
@@ -233,94 +220,119 @@ export default function ListingControls({
       ) : null}
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        <aside className="w-full lg:w-64 bg-white rounded-2xl p-4 border border-slate-200 space-y-4 text-xs lg:sticky lg:top-24">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <span className="font-bold text-sm text-slate-900">
-              {t("listing.filters")}
-            </span>
-            {hasFilters ? (
-              <button
-                type="button"
-                className="font-semibold text-orange-600"
-                onClick={() => router.push(pathname, { scroll: false })}
-              >
-                {t("listing.clear")}
-              </button>
-            ) : null}
-          </div>
-
-          <form onSubmit={onSearch} className="flex gap-2">
-            <input
-              key={searchValue}
-              name={SEARCH_QUERY_KEY}
-              defaultValue={searchValue}
-              placeholder={t("listing.search_placeholder")}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-orange-500"
-            />
-            <button
-              type="submit"
-              className="shrink-0 rounded-xl bg-orange-600 px-3 py-2 font-bold text-white"
+        <aside className="w-full lg:w-64 space-y-4 text-xs lg:sticky lg:top-24">
+          {childrenCategories.length > 0 ? (
+            <nav
+              aria-label={t("listing.subcategories")}
+              className="bg-white rounded-2xl p-4 border border-slate-200 space-y-2"
             >
-              {t("common.search")}
-            </button>
-          </form>
-
-          {brands.length > 0 ? (
-            <div className="space-y-1.5">
-              <span className="font-bold block">{t("listing.brand")}</span>
-              <div className="max-h-48 space-y-1.5 overflow-y-auto">
-                {brands.map((brand) => (
-                  <label key={brand.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="accent-orange-600"
-                      checked={selectedBrands.includes(brand.id)}
-                      onChange={() =>
-                        toggleValue(
-                          COLLECTION_QUERY_KEY,
-                          brand.id,
-                          selectedBrands
-                        )
-                      }
-                    />
-                    {brand.title}
-                  </label>
-                ))}
+              <div className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">
+                {t("listing.subcategories")}
               </div>
-            </div>
+              <ul className="space-y-0.5">
+                {childrenCategories.map((child) => (
+                  <li key={child.id}>
+                    <LocalizedClientLink
+                      href={`/categories/${child.handle}`}
+                      className="block rounded-lg px-2 py-1.5 font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-600"
+                    >
+                      {child.name}
+                    </LocalizedClientLink>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           ) : null}
 
-          {options.map((option) => (
-            <div key={option.id} className="space-y-1.5">
-              <span className="font-bold block">{option.title}</span>
-              <div className="flex flex-wrap gap-1.5">
-                {option.values.map((value) => {
-                  const selected = selectedOptions.includes(value.id)
-                  return (
-                    <button
-                      key={value.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() =>
-                        toggleValue(
-                          OPTION_VALUE_QUERY_KEY,
-                          value.id,
-                          selectedOptions
-                        )
-                      }
-                      className={`rounded-xl border px-2.5 py-1 font-semibold ${
-                        selected
-                          ? "border-orange-500 bg-orange-50 text-orange-700"
-                          : "border-slate-200 text-slate-700"
-                      }`}
-                    >
-                      {value.label}
-                    </button>
-                  )
-                })}
-              </div>
+          <div className="bg-white rounded-2xl p-4 border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="font-bold text-sm text-slate-900">
+                {t("listing.filters")}
+              </span>
+              {hasFilters ? (
+                <button
+                  type="button"
+                  className="font-semibold text-orange-600"
+                  onClick={() => router.push(pathname, { scroll: false })}
+                >
+                  {t("listing.clear")}
+                </button>
+              ) : null}
             </div>
-          ))}
+
+            <form onSubmit={onSearch} className="flex gap-2">
+              <input
+                key={searchValue}
+                name={SEARCH_QUERY_KEY}
+                defaultValue={searchValue}
+                placeholder={t("listing.search_placeholder")}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-orange-500"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-xl bg-orange-600 px-3 py-2 font-bold text-white"
+              >
+                {t("common.search")}
+              </button>
+            </form>
+
+            {brands.length > 0 ? (
+              <div className="space-y-1.5">
+                <span className="font-bold block">{t("listing.brand")}</span>
+                <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                  {brands.map((brand) => (
+                    <label key={brand.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="accent-orange-600"
+                        checked={selectedBrands.includes(brand.id)}
+                        onChange={() =>
+                          toggleValue(
+                            COLLECTION_QUERY_KEY,
+                            brand.id,
+                            selectedBrands
+                          )
+                        }
+                      />
+                      {brand.title}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {options.map((option) => (
+              <div key={option.id} className="space-y-1.5">
+                <span className="font-bold block">{option.title}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {option.values.map((value) => {
+                    const selected = selectedOptions.includes(value.id)
+                    return (
+                      <button
+                        key={value.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() =>
+                          toggleValue(
+                            OPTION_VALUE_QUERY_KEY,
+                            value.id,
+                            selectedOptions
+                          )
+                        }
+                        className={`rounded-xl border px-2.5 py-1 font-semibold ${
+                          selected
+                            ? "border-orange-500 bg-orange-50 text-orange-700"
+                            : "border-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {value.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </aside>
 
         <section className="flex-1 w-full min-w-0 space-y-4">

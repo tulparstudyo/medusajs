@@ -79,7 +79,7 @@ function previewVariant(variant: ImportedVariant): string {
   return `${variant.barcode}  ${options}  ${variant.price ?? "—"}  ${variant.inStock ? "stokta" : "tükendi"}`
 }
 
-function assertProduct(product: ImportedProduct): void {
+export function assertProduct(product: ImportedProduct): void {
   if (!product.name || !product.code || !product.externalId) {
     throw new ImportException("Ürünün adı veya kodu yok.")
   }

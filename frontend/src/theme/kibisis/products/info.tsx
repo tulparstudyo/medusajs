@@ -23,6 +23,10 @@ const HIDDEN_META = new Set([
   "width",
   "height",
   "origin_country",
+  "source_url",
+  "seo",
+  "related",
+  "kibiimport",
 ])
 
 function chainOf(category: HttpTypes.StoreProductCategory): Crumb[] {

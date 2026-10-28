@@ -21,12 +21,17 @@ import FastLinksForm, {
   readFastLinks,
 } from "./sections/fast-links-form"
 import IconBoxForm, { IconBoxSettings, readIconBox } from "./sections/icon-box-form"
+import HtmlContentForm, {
+  HtmlContentSettings,
+  readHtmlContent,
+} from "./sections/html-content-form"
 import TranslationsForm, { readTranslations } from "./translations-form"
 import { api } from "./api"
 import {
   ContentLocale,
   isBannerSection,
   isFastLinksSection,
+  isHtmlContentSection,
   isIconBoxSection,
   isProductSection,
   isSectionType,
@@ -52,6 +57,7 @@ export type SectionFormValues = {
     | PromoBannerSettings
     | FastLinksSettings
     | IconBoxSettings
+    | HtmlContentSettings
     | Record<string, unknown>
   ) & {
     placement?: ProductPlacement
@@ -83,6 +89,9 @@ export default function SectionForm({
   const [banner, setBanner] = useState<PromoBannerSettings>(readPromoBanner(null))
   const [links, setLinks] = useState<FastLinksSettings>(readFastLinks(null))
   const [boxes, setBoxes] = useState<IconBoxSettings>(readIconBox(null))
+  const [htmlContent, setHtmlContent] = useState<HtmlContentSettings>(
+    readHtmlContent(null)
+  )
   const [placement, setPlacement] = useState<ProductPlacement>("below")
   const [installments, setInstallments] = useState(0)
   const [translations, setTranslations] = useState<SectionTranslations>({})
@@ -97,6 +106,7 @@ export default function SectionForm({
   const isBanner = section ? isBannerSection(section.type) : false
   const isLinks = section ? isFastLinksSection(section.type) : false
   const isBoxes = section ? isIconBoxSection(section.type) : false
+  const isHtml = section ? isHtmlContentSection(section.type) : false
   const typeLabel =
     section && section.type in SECTION_LABELS
       ? SECTION_LABELS[section.type as keyof typeof SECTION_LABELS]
@@ -115,6 +125,7 @@ export default function SectionForm({
     setBanner(readPromoBanner(section.settings))
     setLinks(readFastLinks(section.settings))
     setBoxes(readIconBox(section.settings))
+    setHtmlContent(readHtmlContent(section.settings))
     setPlacement(readPlacement(section.settings, section.type))
     setInstallments(readInstallments(section.settings))
     setTranslations(readTranslations(section.settings))
@@ -152,7 +163,9 @@ export default function SectionForm({
               ? links
               : isBoxes
                 ? boxes
-                : {}
+                : isHtml
+                  ? htmlContent
+                  : {}
     const localized = { ...content, translations }
     const settings =
       pageKey === "product"
@@ -253,30 +266,42 @@ export default function SectionForm({
               </div>
             ) : null}
             {isQuick && section ? (
-              <QuickCategoriesForm key={section.id} value={items} onChange={setItems} />
+              <QuickCategoriesForm key={`${section.id}-content`} value={items} onChange={setItems} />
             ) : null}
             {isHero && section ? (
-              <HeroShowcaseForm key={section.id} value={hero} onChange={setHero} />
+              <HeroShowcaseForm key={`${section.id}-content`} value={hero} onChange={setHero} />
             ) : null}
             {isProducts && section ? (
               <SelectedProductForm
-                key={section.id}
+                key={`${section.id}-content`}
                 value={products}
                 onChange={setProducts}
               />
             ) : null}
             {isBanner && section ? (
-              <PromoBannerForm key={section.id} value={banner} onChange={setBanner} />
+              <PromoBannerForm key={`${section.id}-content`} value={banner} onChange={setBanner} />
             ) : null}
             {isLinks && section ? (
-              <FastLinksForm key={section.id} value={links} onChange={setLinks} />
+              <FastLinksForm
+                key={`${section.id}-content`}
+                sectionId={section.id}
+                value={links}
+                onChange={setLinks}
+              />
             ) : null}
             {isBoxes && section ? (
-              <IconBoxForm key={section.id} value={boxes} onChange={setBoxes} />
+              <IconBoxForm key={`${section.id}-content`} value={boxes} onChange={setBoxes} />
+            ) : null}
+            {isHtml && section ? (
+              <HtmlContentForm
+                key={`${section.id}-content`}
+                value={htmlContent}
+                onChange={setHtmlContent}
+              />
             ) : null}
             {section && isSectionType(section.type) ? (
               <TranslationsForm
-                key={section.id}
+                key={`${section.id}-translations`}
                 type={section.type}
                 baseLocale={contentLocales.base}
                 locales={contentLocales.locales}
@@ -291,13 +316,22 @@ export default function SectionForm({
                           ? banner
                           : isLinks
                             ? links
-                            : boxes
+                            : isBoxes
+                              ? boxes
+                              : htmlContent
                 }
                 value={translations}
                 onChange={setTranslations}
               />
             ) : null}
-            {section && !isQuick && !isHero && !isProducts && !isBanner && !isLinks && !isBoxes ? (
+            {section &&
+            !isQuick &&
+            !isHero &&
+            !isProducts &&
+            !isBanner &&
+            !isLinks &&
+            !isBoxes &&
+            !isHtml ? (
               <Text size="small" className="text-ui-fg-subtle">
                 Bu bölümün içerik formu henüz yok. Vitrinde mevcut tasarım gösterilir.
               </Text>

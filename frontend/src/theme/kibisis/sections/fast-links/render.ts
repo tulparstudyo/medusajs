@@ -22,6 +22,25 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;")
 }
 
+function isImageIcon(value: string) {
+  return (
+    /^https?:\/\//i.test(value) ||
+    value.startsWith("/") ||
+    /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(value)
+  )
+}
+
+function linkIconHtml(icon: string, className: string) {
+  const value = icon.trim()
+  if (!value) {
+    return ""
+  }
+  if (isImageIcon(value)) {
+    return `<img class="${className}" src="${escapeHtml(value)}" alt="" aria-hidden="true" />`
+  }
+  return themeIconHtml(value, className)
+}
+
 function part(template: string, name: string) {
   const match = template.match(
     new RegExp(`<template data-part="${name}">([\\s\\S]*?)</template>`)
@@ -72,7 +91,7 @@ export function renderFastLinks(instanceId: string, settings: unknown) {
       itemTemplate
         .replaceAll("{{accent}}", item.accent ? "is-accent" : "")
         .replaceAll("{{href}}", escapeHtml(item.href))
-        .replaceAll("{{icon}}", themeIconHtml(item.icon, "kibi-icon"))
+        .replaceAll("{{icon}}", linkIconHtml(item.icon, "kibi-icon"))
         .replaceAll("{{label}}", escapeHtml(item.label))
         .replaceAll(
           "{{mark}}",

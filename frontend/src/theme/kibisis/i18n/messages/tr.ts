@@ -101,6 +101,7 @@ export const tr: Messages = {
   "listing.sort_by": "Sıralama:",
   "listing.brand": "Marka",
   "listing.filters": "Filtreler",
+  "listing.subcategories": "Kategoriler",
   "listing.clear": "Temizle",
   "listing.search_placeholder": "Ürün ara",
   "listing.no_results": "Bu filtrelere uygun ürün bulunamadı.",

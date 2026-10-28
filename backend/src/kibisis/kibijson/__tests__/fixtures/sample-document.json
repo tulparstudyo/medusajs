@@ -1,0 +1,81 @@
+{
+  "schema": "kibiimport.product/v1",
+  "source": "eski-site.com",
+  "generated_at": "2026-10-28T08:30:00Z",
+  "image_base": "eski-site-2026-10-28",
+  "defaults": { "locale": "tr", "currency": "try" },
+  "products": [
+    {
+      "external_id": 18452,
+      "code": "ELB-2026-001",
+      "source_url": "https://eski-site.com/urun/18452",
+      "status": "published",
+      "title": "Kruvaze Yaka Midi Elbise",
+      "subtitle": "Vipnova",
+      "description": "<p>Viskon kumaştan, kruvaze yaka midi elbise.</p>",
+      "brand": "Vipnova",
+      "color": { "name": "Siyah", "hex": "#000000" },
+      "group": { "main_code": "ELB-2026-001", "position": 0 },
+      "categories": [{ "handle": "elbise" }, { "path": ["Kadın", "Giyim", "Elbise"] }],
+      "collection": "sonbahar-2026",
+      "type": "Elbise",
+      "tags": ["yeni-sezon", "midi"],
+      "tax_rate": 20,
+      "discountable": true,
+      "physical": {
+        "weight": 450,
+        "length": 30,
+        "width": 25,
+        "height": 5,
+        "material": "%95 Viskon %5 Elastan",
+        "origin_country": "TR",
+        "hs_code": "620442"
+      },
+      "seo": {
+        "meta_title": "Kruvaze Yaka Midi Elbise - Siyah",
+        "meta_description": "Viskon kumaş, uzun kol, midi boy."
+      },
+      "attributes": [
+        { "name": "Kumaş", "value": "Viskon" },
+        { "name": "Kalıp", "value": "Regular" }
+      ],
+      "images": [
+        { "key": "back", "path": "elb-2026-001/siyah-02.jpg", "alt": "Arka görünüm", "position": 1 },
+        { "key": "front", "path": "elb-2026-001/siyah-01.jpg", "alt": "Ön görünüm", "position": 0 },
+        "https://cdn.eski-site.com/18452-3.jpg"
+      ],
+      "options": [{ "title": "Beden", "values": ["S", "M"] }],
+      "variants": [
+        {
+          "external_id": "18452-S",
+          "barcode": "8680000000011",
+          "sku": "ELB-2026-001-SYH-S",
+          "options": { "Beden": "S" },
+          "prices": [
+            { "currency_code": "TRY", "amount": "1299.90", "compare_at_amount": "1599.90" },
+            { "currency_code": "eur", "amount": 39.9 }
+          ],
+          "inventory": { "quantity": 12, "manage_inventory": true, "allow_backorder": false },
+          "images": ["front", 2]
+        },
+        {
+          "external_id": "18452-M",
+          "barcode": "8680000000028",
+          "sku": "ELB-2026-001-SYH-M",
+          "options": { "Beden": "M" },
+          "prices": [{ "currency_code": "try", "amount": "1299.90", "compare_at_amount": "1599.90" }],
+          "inventory": { "in_stock": false, "quantity": 0 }
+        }
+      ],
+      "translations": {
+        "en": {
+          "title": "Wrap Collar Midi Dress",
+          "description": "<p>Wrap collar midi dress made of viscose.</p>",
+          "options": { "Beden": { "title": "Size", "values": { "S": "S", "M": "M" } } }
+        }
+      },
+      "related": { "color_siblings": ["18453"] },
+      "metadata": { "legacy_id": 18452 }
+    }
+  ]
+}

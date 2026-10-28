@@ -353,7 +353,7 @@ async function resolveCurrency(
   return chosen.code
 }
 
-async function listCurrencies(container: MedusaContainer): Promise<CurrencyOption[]> {
+export async function listCurrencies(container: MedusaContainer): Promise<CurrencyOption[]> {
   const query = container.resolve(ContainerRegistrationKeys.QUERY) as Graph
   const { data } = await query.graph({
     entity: "store",
@@ -374,7 +374,7 @@ async function listCurrencies(container: MedusaContainer): Promise<CurrencyOptio
   )
 }
 
-async function listLocations(container: MedusaContainer): Promise<LocationOption[]> {
+export async function listLocations(container: MedusaContainer): Promise<LocationOption[]> {
   const query = container.resolve(ContainerRegistrationKeys.QUERY) as Graph
   const { data } = await query.graph({
     entity: "stock_location",
@@ -390,7 +390,7 @@ async function listLocations(container: MedusaContainer): Promise<LocationOption
     .sort((left, right) => left.name.localeCompare(right.name, "tr"))
 }
 
-async function listCategories(container: MedusaContainer): Promise<CategoryOption[]> {
+export async function listCategories(container: MedusaContainer): Promise<CategoryOption[]> {
   const query = container.resolve(ContainerRegistrationKeys.QUERY) as Graph
   const { data } = await query.graph({
     entity: "product_category",

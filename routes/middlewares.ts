@@ -13,8 +13,11 @@ import {
   CreateSectionSchema,
   ReorderSectionsSchema,
   UpdateSectionSchema,
+  UploadSectionFileSchema,
 } from "../kibisis/kibipage/validators"
 import { ImportProductsSchema } from "../kibisis/kibiimport/validators"
+import { CreateBatchSchema, StartBatchSchema } from "../kibisis/kibijson/validators"
+import { ImportCategoriesSchema, RebuildHandlesSchema } from "../kibisis/kibicategory/validators"
 import { AssignGroupSchema } from "../kibisis/kibigroup/validators"
 import { CreateShipmentSchema, InstallCarrierSchema } from "../kibisis/kibicarrier/validators"
 import { SETTINGS_KEYS } from "../kibisis/kibisettings/types"
@@ -67,6 +70,12 @@ export default defineMiddlewares({
     },
     {
       method: ["POST"],
+      matcher: "/admin/kibipage/sections/:id/files",
+      bodyParser: { sizeLimit: "4mb" },
+      middlewares: [validateAndTransformBody(UploadSectionFileSchema)],
+    },
+    {
+      method: ["POST"],
       matcher: "/admin/kibipage/reorder",
       middlewares: [validateAndTransformBody(ReorderSectionsSchema)],
     },
@@ -74,6 +83,28 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/kibiimport",
       middlewares: [validateAndTransformBody(ImportProductsSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibijson/batches",
+      bodyParser: { sizeLimit: "50mb" },
+      middlewares: [validateAndTransformBody(CreateBatchSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibicategory",
+      bodyParser: { sizeLimit: "5mb" },
+      middlewares: [validateAndTransformBody(ImportCategoriesSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibicategory/handles",
+      middlewares: [validateAndTransformBody(RebuildHandlesSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibijson/batches/:id/start",
+      middlewares: [validateAndTransformBody(StartBatchSchema)],
     },
     {
       method: ["POST"],

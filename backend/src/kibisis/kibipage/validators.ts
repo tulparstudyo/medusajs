@@ -111,16 +111,32 @@ export const PromoBannerSettingsSchema = z
   })
   .strict()
 
+const optionalImage = z
+  .string()
+  .trim()
+  .max(2000)
+  .default("")
+  .refine(
+    (value) =>
+      value === "" || isAddress(value) || isSectionIcon(value),
+    "İkon adresi / ile başlamalı, http(s) olmalı veya geçerli bir ikon adı olmalıdır."
+  )
+
 const fastLinkItem = z
   .object({
     id: z.string().trim().min(1).max(80),
     label: z.string().trim().min(1, "Metin gerekli.").max(60),
     href,
-    icon: z
-      .string()
-      .default("")
-      .refine((value) => value === "" || isSectionIcon(value), "İkon geçersiz."),
+    icon: optionalImage,
     accent: z.boolean().default(false),
+  })
+  .strict()
+
+export const UploadSectionFileSchema = z
+  .object({
+    filename: z.string().trim().min(1, "Dosya adı gerekli.").max(200),
+    mime_type: z.string().trim().min(1, "Dosya türü gerekli.").max(100),
+    content: z.string().min(1, "Dosya içeriği gerekli.").max(4_000_000),
   })
   .strict()
 
@@ -145,6 +161,12 @@ const iconBoxItem = z
 export const IconBoxSettingsSchema = z
   .object({
     items: z.array(iconBoxItem).max(12).default([]),
+  })
+  .strict()
+
+export const HtmlContentSettingsSchema = z
+  .object({
+    html: z.string().max(200_000).default(""),
   })
   .strict()
 

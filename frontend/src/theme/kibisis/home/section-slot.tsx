@@ -2,6 +2,8 @@ import { renderFastLinks } from "../sections/fast-links/render"
 import FastLinksView from "../sections/fast-links/view"
 import { renderIconBox } from "../sections/icon-box/render"
 import IconBoxView from "../sections/icon-box/view"
+import { renderHtmlContent } from "../sections/html-content/render"
+import HtmlContentView from "../sections/html-content/view"
 import { renderHeroShowcase } from "../sections/hero-showcase/render"
 import HeroShowcaseView from "../sections/hero-showcase/view"
 import { renderQuickCategories } from "../sections/quick-categories/render"
@@ -65,6 +67,14 @@ export default async function SectionSlot({
       }
 
       return <IconBoxView html={html} />
+    }
+    case "html-content": {
+      const html = renderHtmlContent(section.id, section.settings)
+      if (!html) {
+        return null
+      }
+
+      return <HtmlContentView html={html} />
     }
     default:
       return null

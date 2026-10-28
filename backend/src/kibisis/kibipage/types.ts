@@ -1,10 +1,18 @@
-export const KIBI_PAGE_KEYS = ["home", "product"] as const
+export const KIBI_PAGE_KEYS = ["home", "product","cookiepolicy","privacy","terms","contact","about","faq","careers"] as const
 
 export type PageKey = (typeof KIBI_PAGE_KEYS)[number]
 
 export const KIBI_PAGE_LABELS: Record<PageKey, string> = {
   home: "Ana Sayfa",
   product: "Ürün Detay",
+  cookiepolicy: "Çerez Politikası",
+  privacy: "Gizlilik Politikası",
+  terms: "Kullanım Koşulları",
+  contact: "İletişim",
+  about: "Hakkımızda",
+  faq: "S.S.S.",
+  careers: "İş İlanları",
+
 }
 
 export const PRODUCT_PLACEMENTS = ["buy", "aside", "below"] as const
@@ -48,6 +56,7 @@ export const SECTION_TYPES = [
   "promo-banner",
   "fast-links",
   "icon-box",
+  "html-content",
 ] as const
 
 export type SectionType = (typeof SECTION_TYPES)[number]
@@ -59,6 +68,7 @@ export const SECTION_LABELS: Record<SectionType, string> = {
   "promo-banner": "Banner",
   "fast-links": "Hızlı bağlantılar",
   "icon-box": "İkon kutusu",
+  "html-content": "HTML içerik",
 }
 
 export const PRODUCT_SOURCES = [
@@ -230,6 +240,18 @@ export function isIconBoxSection(type: string): boolean {
   return type === "icon-box"
 }
 
+export type HtmlContentSettings = {
+  html: string
+}
+
+export const emptyHtmlContent = (): HtmlContentSettings => ({
+  html: "",
+})
+
+export function isHtmlContentSection(type: string): boolean {
+  return type === "html-content"
+}
+
 export {
   SECTION_ICONS,
   isSectionIcon,
@@ -322,6 +344,7 @@ export const SECTION_TRANSLATABLE: Record<SectionType, TranslationSpec> = {
   },
   "fast-links": { fields: ["title"], lists: { items: ["label"] }, groups: {} },
   "icon-box": { fields: [], lists: { items: ["title", "text"] }, groups: {} },
+  "html-content": { fields: ["html"], lists: {}, groups: {} },
 }
 
 export const TRANSLATION_FIELD_LABELS: Record<string, string> = {
@@ -330,6 +353,7 @@ export const TRANSLATION_FIELD_LABELS: Record<string, string> = {
   text: "Açıklama",
   action: "Bağlantı yazısı",
   label: "Etiket",
+  html: "HTML içerik",
 }
 
 export const TRANSLATION_GROUP_LABELS: Record<string, string> = {

@@ -91,6 +91,12 @@
 .kibi-links__item .kibi-icon {
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.kibi-links__item img.kibi-icon {
+  display: block;
 }
 
 .kibi-links--pill .kibi-links__item.is-accent {

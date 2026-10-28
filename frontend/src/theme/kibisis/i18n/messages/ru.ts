@@ -102,6 +102,7 @@ export const ru: Messages = {
   "listing.sort_by": "Сортировка:",
   "listing.brand": "Бренд",
   "listing.filters": "Фильтры",
+  "listing.subcategories": "Категории",
   "listing.clear": "Сбросить",
   "listing.search_placeholder": "Поиск товаров",
   "listing.no_results": "Нет товаров, соответствующих фильтрам.",

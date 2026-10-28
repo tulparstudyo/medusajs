@@ -1,5 +1,5 @@
 import { Sparkles } from "@medusajs/icons"
-import { Button, Input, Label, Tabs, Text } from "@medusajs/ui"
+import { Button, Input, Label, Tabs, Text, Textarea } from "@medusajs/ui"
 import { useMemo, useRef, useState } from "react"
 
 import AiTranslateModal, { TranslationJob } from "../../kibitranslate/admin/ai-translate-modal"
@@ -49,17 +49,30 @@ function FieldInput({
   value: string
   onChange: (value: string) => void
 }) {
+  const multiline = id.includes("-html") || label === "HTML içerik"
+
   return (
     <div className="flex flex-col gap-y-1">
       <Label htmlFor={id} size="small">
         {label}
       </Label>
-      <Input
-        id={id}
-        value={value}
-        placeholder={base}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      {multiline ? (
+        <Textarea
+          id={id}
+          value={value}
+          placeholder={base}
+          rows={10}
+          className="font-mono text-xs"
+          onChange={(event) => onChange(event.target.value)}
+        />
+      ) : (
+        <Input
+          id={id}
+          value={value}
+          placeholder={base}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
     </div>
   )
 }

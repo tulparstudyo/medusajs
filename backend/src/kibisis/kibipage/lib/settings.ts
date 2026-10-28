@@ -3,6 +3,7 @@ import { MedusaError } from "@medusajs/framework/utils"
 import {
   EmptySettingsSchema,
   HeroShowcaseSettingsSchema,
+  HtmlContentSettingsSchema,
   PromoBannerSettingsSchema,
   FastLinksSettingsSchema,
   IconBoxSettingsSchema,
@@ -12,6 +13,7 @@ import {
 import {
   emptyFastLinks,
   emptyHeroCard,
+  emptyHtmlContent,
   emptyIconBox,
   emptyPromoBanner,
   emptySelectedProduct,
@@ -161,6 +163,20 @@ function parseSettings(type: SectionType, settings: unknown): SectionSettings {
     return parsed.data
   }
 
+  if (type === "html-content") {
+    const parsed = HtmlContentSettingsSchema.safeParse(
+      settings ?? defaultSettings(type)
+    )
+    if (!parsed.success) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        parsed.error.issues[0]?.message ?? "HTML içerik geçersiz."
+      )
+    }
+
+    return parsed.data
+  }
+
   if (isProductSection(type)) {
     const parsed = SelectedProductSettingsSchema.safeParse(
       settings ?? defaultSettings(type)
@@ -223,6 +239,10 @@ export function defaultSettings(type: SectionType): SectionSettings {
 
   if (type === "icon-box") {
     return emptyIconBox()
+  }
+
+  if (type === "html-content") {
+    return emptyHtmlContent()
   }
 
   return {}

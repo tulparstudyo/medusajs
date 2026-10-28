@@ -19,6 +19,10 @@ const PRIVATE_UPLOAD_DIR =
 // kibiimport's image cleanup reads the folder the file provider writes to.
 process.env.CDN_DIR = CDN_DIR
 
+// kibijson reads product images uploaded over FTP from this folder.
+process.env.KIBIIMPORT_IMAGE_ROOT =
+  process.env.KIBIIMPORT_IMAGE_ROOT || path.resolve(BACKEND_DIR, "import-images")
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -65,6 +69,9 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/kibisis/kibiimport",
+    },
+    {
+      resolve: "./src/kibisis/kibijson",
     },
     {
       resolve: "./src/kibisis/kibigroup",
