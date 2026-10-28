@@ -94,5 +94,3 @@ step "Vitrin, backend ve CDN durduruluyor"
 stop_app frontend 8000
 stop_app backend 9000
 stop_app cdn 9080
-
-[ "$MODE" = stop ] && { echo "Durduruldu."; exit 0; }
