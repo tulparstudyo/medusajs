@@ -13,6 +13,12 @@ const EVENTS = [
   "product-collection.created",
   "product-collection.updated",
   "product-collection.deleted",
+  "inventory-item.created",
+  "inventory-item.updated",
+  "inventory-item.deleted",
+  "inventory-level.created",
+  "inventory-level.updated",
+  "inventory-level.deleted",
 ]
 
 export default async function revalidateStorefrontProducts({

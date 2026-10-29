@@ -58,7 +58,8 @@ export const listProducts = async ({
     ...(await getAuthHeaders()),
   }
 
-  const next = await getCatalogCacheOptions("products")
+  const next =
+    cache === "no-store" ? undefined : await getCatalogCacheOptions("products")
 
   return sdk.client
     .fetch<{ products: HttpTypes.StoreProduct[]; count: number }>(
@@ -74,7 +75,7 @@ export const listProducts = async ({
           ...queryParams,
         },
         headers,
-        next,
+        ...(next ? { next } : {}),
         cache,
       }
     )
