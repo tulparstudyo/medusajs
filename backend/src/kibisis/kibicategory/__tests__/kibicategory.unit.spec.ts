@@ -1,3 +1,9 @@
+import {
+  buildCategoryFilterOptions,
+  categoryFilterQueryIds,
+  filterCategoryOptions,
+  parseCategoryFilterParam,
+} from "../filter"
 import { planHandleRebuild, treeHandle } from "../handles"
 import { ExistingCategory, planCategories } from "../plan"
 import { CategoryDocumentSchema, toTree } from "../schema"
@@ -124,5 +130,62 @@ describe("kibicategory", () => {
       ["Kadın", "exists"],
       ["Erkek", "create"],
     ])
+  })
+
+  it("builds hierarchical category filter options with full paths and descendant IDs", () => {
+    const options = buildCategoryFilterOptions([
+      { id: "kadin", name: "Kadın", parent_category_id: "giyim", rank: 0 },
+      { id: "giyim", name: "Giyim", parent_category_id: null, rank: 0 },
+      { id: "elbise", name: "Elbise", parent_category_id: "kadin", rank: 1 },
+      { id: "bluz", name: "Bluz", parent_category_id: "kadin", rank: 0 },
+    ])
+
+    expect(options).toEqual([
+      {
+        id: "giyim",
+        name: "Giyim",
+        path: "Giyim",
+        depth: 0,
+        parentId: null,
+        descendantIds: ["kadin", "bluz", "elbise"],
+      },
+      {
+        id: "kadin",
+        name: "Kadın",
+        path: "Giyim > Kadın",
+        depth: 1,
+        parentId: "giyim",
+        descendantIds: ["bluz", "elbise"],
+      },
+      {
+        id: "bluz",
+        name: "Bluz",
+        path: "Giyim > Kadın > Bluz",
+        depth: 2,
+        parentId: "kadin",
+        descendantIds: [],
+      },
+      {
+        id: "elbise",
+        name: "Elbise",
+        path: "Giyim > Kadın > Elbise",
+        depth: 2,
+        parentId: "kadin",
+        descendantIds: [],
+      },
+    ])
+
+    expect(categoryFilterQueryIds(options, "kadin", true)).toEqual(["kadin", "bluz", "elbise"])
+    expect(categoryFilterQueryIds(options, "kadin", false)).toEqual(["kadin"])
+
+    expect(parseCategoryFilterParam(options, "kadin,bluz,elbise")).toEqual({
+      selectedId: "kadin",
+      includeSubcategories: true,
+    })
+    expect(parseCategoryFilterParam(options, "kadin")).toEqual({
+      selectedId: "kadin",
+      includeSubcategories: false,
+    })
+    expect(filterCategoryOptions(options, "İLBİSE".replace("İLB", "ELB")).map((o) => o.id)).toEqual(["elbise"])
   })
 })
