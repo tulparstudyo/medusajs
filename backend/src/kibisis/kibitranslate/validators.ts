@@ -5,12 +5,21 @@ const locale = z
   .trim()
   .regex(/^[a-zA-Z]{2,3}([-_][A-Za-z0-9]{2,8})*$/, "Dil kodu geçersiz.")
 
+export const MAX_TRANSLATE_TEXT_LENGTH = 200_000
+
 export const TranslateTextsSchema = z
   .object({
     source: locale,
     target: locale,
     texts: z
-      .array(z.string().max(20_000, "Bir metin en fazla 20000 karakter olabilir."))
+      .array(
+        z
+          .string()
+          .max(
+            MAX_TRANSLATE_TEXT_LENGTH,
+            `Bir metin en fazla ${MAX_TRANSLATE_TEXT_LENGTH} karakter olabilir.`
+          )
+      )
       .min(1, "Çevrilecek metin yok.")
       .max(500, "Tek seferde en fazla 500 metin çevrilebilir."),
     format: z.enum(["text", "html"]).default("text"),
@@ -34,7 +43,10 @@ export const EditMemorySchema = z
       .string()
       .trim()
       .min(1, "Çeviri boş olamaz.")
-      .max(20_000, "Çeviri en fazla 20000 karakter olabilir."),
+      .max(
+        MAX_TRANSLATE_TEXT_LENGTH,
+        `Çeviri en fazla ${MAX_TRANSLATE_TEXT_LENGTH} karakter olabilir.`
+      ),
   })
   .strict()
 

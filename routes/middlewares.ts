@@ -82,11 +82,13 @@ export default defineMiddlewares({
     {
       method: ["POST"],
       matcher: "/admin/kibipage/pages/:key/sections",
+      bodyParser: { sizeLimit: "5mb" },
       middlewares: [validateAndTransformBody(CreateSectionSchema)],
     },
     {
       method: ["POST"],
       matcher: "/admin/kibipage/sections/:id",
+      bodyParser: { sizeLimit: "5mb" },
       middlewares: [validateAndTransformBody(UpdateSectionSchema)],
     },
     {
@@ -145,6 +147,7 @@ export default defineMiddlewares({
     {
       method: ["POST"],
       matcher: "/admin/kibitranslate",
+      bodyParser: { sizeLimit: "5mb" },
       middlewares: [validateAndTransformBody(TranslateTextsSchema)],
     },
     {

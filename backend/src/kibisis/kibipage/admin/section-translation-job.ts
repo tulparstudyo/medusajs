@@ -29,14 +29,19 @@ export function collectSectionUnits(
 ): TranslationUnit[] {
   const spec = SECTION_TRANSLATABLE[type]
   const units: TranslationUnit[] = []
-  const add = (path: Path, text: string, current: unknown) => {
+  const add = (path: Path, text: string, current: unknown, format?: "text" | "html") => {
     if (text && (overwrite || !filled(current))) {
-      units.push({ key: JSON.stringify(path), text })
+      units.push({ key: JSON.stringify(path), text, ...(format ? { format } : {}) })
     }
   }
 
   for (const field of spec.fields) {
-    add(["field", field], sourceText(content[field]), layer.fields?.[field])
+    add(
+      ["field", field],
+      sourceText(content[field]),
+      layer.fields?.[field],
+      field === "html" ? "html" : undefined
+    )
   }
 
   for (const [group, fields] of Object.entries(spec.groups)) {

@@ -3,7 +3,8 @@ import { generateKeyPairSync, createVerify } from "node:crypto"
 import { MedusaError } from "@medusajs/framework/utils"
 
 import { TranslateError } from "../contract"
-import { batchesOf, translateRecords, translateStatus, translateTexts } from "../translator"
+import { batchesOf, splitLongText, translateRecords, translateStatus, translateTexts } from "../translator"
+import { TranslateTextsSchema } from "../validators"
 import { memoryHash } from "../memory"
 import { googleAdapter, googleLanguage } from "../providers/google/adapter"
 import {
@@ -351,6 +352,46 @@ describe("translate gateway", () => {
       ["bbbb", "cc"],
     ])
     expect(batchesOf(["x".repeat(50)], { maxBatch: 10, maxChars: 6 })).toHaveLength(1)
+  })
+
+  it("accepts and splits long HTML texts that exceed the per-call limit", async () => {
+    const paragraph = "<p>Çerez politikası paragraf metni burada yer alıyor.</p>\n"
+    const longHtml = paragraph.repeat(600)
+    expect(longHtml.length).toBeGreaterThan(25_000)
+
+    const parsed = TranslateTextsSchema.safeParse({
+      source: "tr-TR",
+      target: "en-US",
+      texts: [longHtml],
+      format: "html",
+    })
+    expect(parsed.success).toBe(true)
+
+    const chunks = splitLongText(longHtml, 20_000)
+    expect(chunks.length).toBeGreaterThan(1)
+    expect(chunks.every((chunk) => chunk.length <= 20_000)).toBe(true)
+
+    const fetchSpy = jest.spyOn(global, "fetch").mockImplementation(async (_url, init) => {
+      const { q } = JSON.parse(String(init?.body)) as { q: string[] }
+      return jsonResponse(200, {
+        data: {
+          translations: q.map((text) => ({
+            translatedText: text.replaceAll("Çerez politikası", "Cookie policy"),
+          })),
+        },
+      })
+    })
+
+    const [translated] = await translateTexts(containerWith({}), {
+      texts: [longHtml],
+      source: "tr-TR",
+      target: "en-US",
+      format: "html",
+    })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(translated).toContain("Cookie policy")
+    expect(translated.split("<p>")).toHaveLength(601)
   })
 
   it("sends repeated texts once and keeps blank texts as they are", async () => {

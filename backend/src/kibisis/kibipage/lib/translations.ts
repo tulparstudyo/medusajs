@@ -8,6 +8,7 @@ import {
 
 const LOCALE_CODE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/
 const MAX_LENGTH = 300
+const MAX_HTML_LENGTH = 200_000
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
@@ -22,7 +23,8 @@ function cleanFields(source: unknown, fields: string[]): Record<string, string> 
   for (const field of fields) {
     const value = source[field]
     if (typeof value === "string" && value.trim()) {
-      result[field] = value.trim().slice(0, MAX_LENGTH)
+      const limit = field === "html" ? MAX_HTML_LENGTH : MAX_LENGTH
+      result[field] = value.trim().slice(0, limit)
     }
   }
 

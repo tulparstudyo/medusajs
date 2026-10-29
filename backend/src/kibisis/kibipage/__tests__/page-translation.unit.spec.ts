@@ -1,8 +1,10 @@
 import {
   applySectionResults,
   collectPageUnits,
+  collectSectionUnits,
   splitPageResults,
 } from "../admin/section-translation-job"
+import { cleanTranslations } from "../lib/translations"
 
 const sections = [
   {
@@ -40,6 +42,21 @@ describe("page translation job", () => {
 
     expect(texts).toContain("Popüler Aramalar")
     expect(collectPageUnits(sections, "de", false)).toHaveLength(5)
+  })
+
+  it("marks html-content fields with html format and preserves long html translations", () => {
+    const longHtml = `<article>${"<p>Çerez politikası metni.</p>\n".repeat(1200)}</article>`
+    const units = collectSectionUnits("html-content", { html: longHtml }, {}, false)
+
+    expect(units).toHaveLength(1)
+    expect(units[0].format).toBe("html")
+
+    const cleaned = cleanTranslations(
+      "html-content",
+      { html: longHtml },
+      { en: { fields: { html: longHtml } } }
+    )
+    expect(cleaned?.en?.fields?.html).toBe(longHtml)
   })
 
   it("routes results back to their sections", () => {

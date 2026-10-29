@@ -78,6 +78,98 @@ export function batchesOf(texts: string[], adapter: Pick<TranslateAdapter, "maxB
   return batches
 }
 
+/**
+ * Splits a single text that exceeds `maxChars` into smaller pieces at safe
+ * boundaries (newlines, closing HTML tags, or spaces) so providers with per-call
+ * character/token limits can translate long HTML documents without truncation.
+ */
+export function splitLongText(text: string, maxChars: number): string[] {
+  if (maxChars <= 0 || text.length <= maxChars) {
+    return [text]
+  }
+
+  const chunks: string[] = []
+  let start = 0
+
+  while (start < text.length) {
+    if (text.length - start <= maxChars) {
+      const tail = text.slice(start)
+      if (tail.trim()) {
+        chunks.push(tail)
+      }
+      break
+    }
+
+    const window = text.slice(start, start + maxChars)
+    const minBreak = Math.floor(maxChars * 0.5)
+    let cut = -1
+
+    const newline = window.lastIndexOf("\n")
+    if (newline >= minBreak) {
+      cut = newline + 1
+    }
+
+    if (cut === -1) {
+      const tagClose = window.lastIndexOf(">")
+      if (tagClose >= minBreak) {
+        cut = tagClose + 1
+      }
+    }
+
+    if (cut === -1) {
+      const openTag = window.lastIndexOf("<")
+      const closeTag = window.lastIndexOf(">")
+      if (openTag > closeTag && openTag > 0) {
+        cut = openTag
+      }
+    }
+
+    if (cut === -1) {
+      const space = window.lastIndexOf(" ")
+      if (space >= minBreak) {
+        cut = space + 1
+      }
+    }
+
+    if (cut <= 0) {
+      cut = maxChars
+    }
+
+    const piece = text.slice(start, start + cut)
+    if (piece.trim()) {
+      chunks.push(piece)
+    }
+    start += cut
+  }
+
+  return chunks.length ? chunks : [text]
+}
+
+function joinTranslatedChunks(sourceChunks: string[], translatedChunks: string[]): string {
+  if (translatedChunks.length <= 1) {
+    return translatedChunks[0] ?? ""
+  }
+
+  let out = ""
+  for (let i = 0; i < translatedChunks.length; i++) {
+    const piece = translatedChunks[i] ?? ""
+    if (!piece) {
+      continue
+    }
+    if (out) {
+      const prevSource = sourceChunks[i - 1] ?? ""
+      const sep = prevSource.endsWith("\n") && !out.endsWith("\n")
+        ? "\n"
+        : /\s$/.test(prevSource) && !/\s$/.test(out) && !/^\s/.test(piece)
+          ? " "
+          : ""
+      out += sep
+    }
+    out += piece
+  }
+  return out
+}
+
 export async function translateStatus(container: Container): Promise<TranslateStatus> {
   const settings = await settingsOf(container)
   const provider = translateProvider(settings.provider)
@@ -142,8 +234,11 @@ export async function translateTexts(
 
   try {
     const client = provider.createClient({ credentials: credentialsOf(provider, settings) })
+    const maxChars = provider.adapter.maxChars
+    const shortTexts = missing.filter((text) => text.length <= maxChars)
+    const longTexts = missing.filter((text) => text.length > maxChars)
 
-    for (const texts of batchesOf(missing, provider.adapter)) {
+    for (const texts of batchesOf(shortTexts, provider.adapter)) {
       const batch = { ...request, format, texts }
       const response = await client.translate(provider.adapter.toTranslate(batch))
       const results = provider.adapter.fromTranslate(batch, response)
@@ -158,6 +253,29 @@ export async function translateTexts(
           provider: provider.id,
         }))
       )
+    }
+
+    for (const longText of longTexts) {
+      const sourceChunks = splitLongText(longText, maxChars)
+      const translatedChunks: string[] = []
+      for (const texts of batchesOf(sourceChunks, provider.adapter)) {
+        const batch = { ...request, format, texts }
+        const response = await client.translate(provider.adapter.toTranslate(batch))
+        const results = provider.adapter.fromTranslate(batch, response)
+        translatedChunks.push(...texts.map((_, index) => results[index] ?? ""))
+      }
+      const fullResult = joinTranslatedChunks(sourceChunks, translatedChunks)
+      translated.set(longText, fullResult)
+      await memory.remember([
+        {
+          source: request.source,
+          target: request.target,
+          format,
+          text: longText,
+          translated: fullResult,
+          provider: provider.id,
+        },
+      ])
     }
   } catch (error) {
     if (error instanceof TranslateError) {
