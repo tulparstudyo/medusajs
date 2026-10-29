@@ -2,7 +2,6 @@ export const SETTINGS_KEYS = [
   "store",
   "social",
   "payment",
-  "shipping",
   "carriers",
   "smtp",
   "translate",
@@ -55,11 +54,6 @@ export const SETTINGS_MENU: { key: SettingsKey; label: string; description: stri
     key: "payment",
     label: "Ödeme Ayarları",
     description: "Kredi kartı altyapısı, taksit, havale/EFT ve kapıda ödeme.",
-  },
-  {
-    key: "shipping",
-    label: "Kargo Ayarları",
-    description: "Varsayılan kargo firması, ücretler, gönderim süresi ve gönderici bilgileri.",
   },
   {
     key: "carriers",
@@ -186,17 +180,6 @@ export type PaymentSettings = {
   cod_fee: number
 }
 
-export type ShippingSettings = {
-  default_carrier: string
-  flat_rate: number
-  free_shipping_threshold: number
-  dispatch_days: number
-  cutoff_time: string
-  sender_name: string
-  sender_phone: string
-  sender_address: string
-}
-
 export type SmtpSettings = {
   enabled: boolean
   host: string
@@ -231,7 +214,6 @@ export type SettingsValues = {
   store: StoreSettings
   social: SocialSettings
   payment: PaymentSettings
-  shipping: ShippingSettings
   carriers: CarrierSettings
   smtp: SmtpSettings
   translate: TranslateSettings
@@ -246,7 +228,6 @@ export const SECRET_FIELDS = {
   store: [],
   social: [],
   payment: ["card_api_key", "card_secret_key"],
-  shipping: [],
   carriers: [],
   smtp: ["password"],
   translate: ["google_api_key", "google_service_account", "gemini_api_key"],
@@ -292,16 +273,6 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
     bank_transfer_discount: 0,
     cod_enabled: false,
     cod_fee: 0,
-  },
-  shipping: {
-    default_carrier: "",
-    flat_rate: 0,
-    free_shipping_threshold: 0,
-    dispatch_days: 1,
-    cutoff_time: "",
-    sender_name: "",
-    sender_phone: "",
-    sender_address: "",
   },
   carriers: {},
   smtp: {

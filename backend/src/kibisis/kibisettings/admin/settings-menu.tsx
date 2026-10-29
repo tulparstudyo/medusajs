@@ -1,5 +1,4 @@
 import {
-  ArchiveBox,
   BuildingStorefront,
   ChevronRight,
   CreditCard,
@@ -17,7 +16,6 @@ const MENU_ICONS: Record<SettingsKey, typeof Envelope> = {
   store: BuildingStorefront,
   social: Share,
   payment: CreditCard,
-  shipping: ArchiveBox,
   carriers: TruckFast,
   smtp: Envelope,
   translate: Language,

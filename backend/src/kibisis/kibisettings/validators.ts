@@ -16,7 +16,6 @@ import {
 } from "./types"
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 
 function text(max: number) {
   return z.string().trim().max(max, `En fazla ${max} karakter olabilir.`).default("")
@@ -112,22 +111,6 @@ export const PaymentSettingsSchema = z
   })
   .strict()
 
-export const ShippingSettingsSchema = z
-  .object({
-    default_carrier: text(30),
-    flat_rate: money(100_000),
-    free_shipping_threshold: money(),
-    dispatch_days: z.number().int().min(0).max(30, "En fazla 30 gün.").default(1),
-    cutoff_time: text(5).refine(
-      (value) => value === "" || TIME_PATTERN.test(value),
-      "Saat SS:DD biçiminde olmalı (ör. 15:00)."
-    ),
-    sender_name: text(120),
-    sender_phone: text(40),
-    sender_address: text(500),
-  })
-  .strict()
-
 /** Built per request: carriers can be installed while the server runs. */
 export function carrierSettingsSchema() {
   const shape: Record<string, z.ZodType> = {}
@@ -218,7 +201,6 @@ export const SETTINGS_SCHEMAS = {
   store: StoreSettingsSchema,
   social: SocialSettingsSchema,
   payment: PaymentSettingsSchema,
-  shipping: ShippingSettingsSchema,
   carriers: carrierSettingsSchema,
   smtp: SmtpSettingsSchema,
   translate: TranslateSettingsSchema,
