@@ -209,6 +209,6 @@ export async function carrierCatalog(): Promise<CarrierCatalogDTO> {
     errors,
     install_enabled: !!server.url,
     domain: server.domain,
-    store_url: process.env.KIBISIS_STORE_URL || null,
+    store_url: process.env.KIBISIS_SHOP_URL || null,
   }
 }

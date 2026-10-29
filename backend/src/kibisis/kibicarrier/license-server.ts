@@ -73,7 +73,6 @@ export function rememberRequestOrigin(req?: { headers?: HeaderBag } | null): voi
 function firstPublicEnvUrl(): URL | null {
   const candidates = [
     process.env.MEDUSA_BACKEND_URL,
-    process.env.KIBISIS_STORE_URL,
     process.env.ADMIN_CORS,
     process.env.AUTH_CORS,
     process.env.STORE_CORS,
