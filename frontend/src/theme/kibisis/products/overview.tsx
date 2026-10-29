@@ -321,15 +321,18 @@ export default function ProductOverview({
 
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const justSwipedRef = useRef(false)
+  const thumbStripRef = useRef<HTMLDivElement | null>(null)
   const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   useEffect(() => {
+    const strip = thumbStripRef.current
     const activeBtn = thumbnailRefs.current[imageIndex]
-    if (activeBtn) {
-      activeBtn.scrollIntoView({
+    if (strip && activeBtn) {
+      const targetLeft =
+        activeBtn.offsetLeft - strip.clientWidth / 2 + activeBtn.clientWidth / 2
+      strip.scrollTo({
+        left: Math.max(0, targetLeft),
         behavior: "smooth",
-        inline: "center",
-        block: "nearest",
       })
     }
   }, [imageIndex])
@@ -495,7 +498,10 @@ export default function ProductOverview({
           </div>
           {gallery.length > 1 ? (
             <div className="relative w-full">
-              <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 scroll-smooth">
+              <div
+                ref={thumbStripRef}
+                className="flex gap-2 overflow-x-auto no-scrollbar py-1 scroll-smooth"
+              >
                 {gallery.map((thumb, index) => (
                   <button
                     key={thumb.id}
@@ -593,6 +599,7 @@ export default function ProductOverview({
                     <LocalizedClientLink
                       key={item.product_id}
                       href={`/products/${item.handle}`}
+                      scroll={false}
                       aria-current={selected ? "page" : undefined}
                       title={item.in_stock ? item.color : `${item.color} (${t("product.sold_out")})`}
                       className={`p-1.5 rounded-xl flex flex-col items-center min-w-[65px] border-2 transition-colors ${
