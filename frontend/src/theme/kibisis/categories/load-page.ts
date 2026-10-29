@@ -3,6 +3,10 @@
 import { sdk } from "@lib/config"
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import {
+  getListingImageSettings,
+  type ListingImageSettings,
+} from "@lib/data/site-settings"
 import type { ListingSort } from "@lib/util/listing-params"
 
 import type { KibisisProduct } from "../home/data/products"
@@ -107,7 +111,8 @@ function toOptions(facets: ListingResponse["facets"]): ListingOption[] {
 async function loadCards(
   productIds: string[],
   countryCode: string,
-  t: Translate
+  t: Translate,
+  imageSettings: ListingImageSettings
 ) {
   if (!productIds.length) {
     return []
@@ -123,7 +128,7 @@ async function loadCards(
 
   return productIds.flatMap((id) => {
     const product = byId.get(id)
-    const card = product ? toListingCard(product, t) : null
+    const card = product ? toListingCard(product, t, imageSettings) : null
     return card ? [card] : []
   })
 }
@@ -145,7 +150,7 @@ export async function loadListingPage(
     return { page: pageNumber, cards: [], count: 0, totalPages: 0, options: [] }
   }
 
-  const [listing, { t }] = await Promise.all([
+  const [listing, { t }, imageSettings] = await Promise.all([
     sdk.client.fetch<ListingResponse>("/store/kibilisting", {
       method: "GET",
       query: {
@@ -161,11 +166,12 @@ export async function loadListingPage(
       cache: "no-store",
     }),
     getKibiI18n(),
+    getListingImageSettings(),
   ])
 
   return {
     page: pageNumber,
-    cards: await loadCards(listing.product_ids, countryCode, t),
+    cards: await loadCards(listing.product_ids, countryCode, t, imageSettings),
     count: listing.count,
     totalPages: Math.ceil(listing.count / PRODUCT_LIMIT),
     options: toOptions(listing.facets),

@@ -153,6 +153,8 @@ export type SelectedProductSettings = {
   limit: number
   product_ids: string[]
   tag_id: string
+  image_width: number
+  image_height: number
 }
 
 export const emptySelectedProduct = (): SelectedProductSettings => ({
@@ -161,6 +163,8 @@ export const emptySelectedProduct = (): SelectedProductSettings => ({
   limit: 8,
   product_ids: [],
   tag_id: "",
+  image_width: 0,
+  image_height: 0,
 })
 
 export function isProductSection(type: string): boolean {

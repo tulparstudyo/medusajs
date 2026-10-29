@@ -1,3 +1,4 @@
+import { MedusaError } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
 
 const MAX_DEPTH = 10
@@ -60,7 +61,10 @@ export function toTree(document: z.infer<typeof CategoryDocumentSchema>): Catego
 
   const visit = (nodes: CategoryNodeInput[], depth: number): CategoryTree[] => {
     if (depth > MAX_DEPTH) {
-      throw new Error(`Kategori ağacı en fazla ${MAX_DEPTH} seviye olabilir.`)
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `Kategori ağacı en fazla ${MAX_DEPTH} seviye olabilir.`
+      )
     }
 
     const merged: CategoryTree[] = []
@@ -69,7 +73,10 @@ export function toTree(document: z.infer<typeof CategoryDocumentSchema>): Catego
       count += 1
 
       if (count > MAX_NODES) {
-        throw new Error(`Bir dosyada en fazla ${MAX_NODES} kategori olabilir.`)
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Bir dosyada en fazla ${MAX_NODES} kategori olabilir.`
+        )
       }
 
       const entry: CategoryTree =

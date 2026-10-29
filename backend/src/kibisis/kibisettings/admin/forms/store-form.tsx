@@ -1,4 +1,4 @@
-import { FieldGroup, SwitchField, TextField } from "../fields"
+import { FieldGroup, NumberField, SwitchField, TextField } from "../fields"
 import { SettingsFormProps } from "../settings-screen"
 
 export default function StoreForm({ values, onChange }: SettingsFormProps<"store">) {
@@ -63,6 +63,35 @@ export default function StoreForm({ values, onChange }: SettingsFormProps<"store
           value={values.tax_number}
           onChange={(tax_number) => onChange({ tax_number: tax_number.replace(/\D/g, "") })}
         />
+      </FieldGroup>
+      <FieldGroup
+        title="Liste sayfası ürün görsel boyutu"
+        description="Kategori ve ürün liste sayfalarındaki ürün kartı görsellerinin boyutlandırma ölçüleri."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <NumberField
+            id="store-listing-image-width"
+            label="Görsel genişliği"
+            min={0}
+            max={4096}
+            step={1}
+            suffix="px"
+            hint="0 bırakılırsa genişlik parametresi eklenmez."
+            value={values.listing_image_width}
+            onChange={(listing_image_width) => onChange({ listing_image_width })}
+          />
+          <NumberField
+            id="store-listing-image-height"
+            label="Görsel yüksekliği"
+            min={0}
+            max={4096}
+            step={1}
+            suffix="px"
+            hint="0 bırakılırsa yükseklik parametresi eklenmez."
+            value={values.listing_image_height}
+            onChange={(listing_image_height) => onChange({ listing_image_height })}
+          />
+        </div>
       </FieldGroup>
       <FieldGroup title="Bakım modu">
         <SwitchField

@@ -25,6 +25,11 @@ export type ContactSettings = {
   address: string
 }
 
+export type ListingImageSettings = {
+  listing_image_width: number
+  listing_image_height: number
+}
+
 const EMPTY_SOCIAL: SocialSettings = {
   instagram: "",
   youtube: "",
@@ -46,6 +51,11 @@ const EMPTY_CONTACT: ContactSettings = {
   address: "",
 }
 
+const EMPTY_LISTING_IMAGE: ListingImageSettings = {
+  listing_image_width: 0,
+  listing_image_height: 0,
+}
+
 async function readGroup<T extends Record<string, string>>(key: string, empty: T): Promise<T> {
   try {
     const response = await sdk.client.fetch<{ values: Partial<T> }>(
@@ -65,9 +75,35 @@ async function readGroup<T extends Record<string, string>>(key: string, empty: T
   }
 }
 
+function clampDimension(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0
+  }
+  const truncated = Math.trunc(value)
+  if (truncated <= 0) {
+    return 0
+  }
+  return Math.min(4096, truncated)
+}
+
 export const getSocialSettings = cache(() => readGroup("social", EMPTY_SOCIAL))
 
 export const getContactSettings = cache(() => readGroup("store", EMPTY_CONTACT))
+
+export const getListingImageSettings = cache(async (): Promise<ListingImageSettings> => {
+  try {
+    const response = await sdk.client.fetch<{ values: Partial<ListingImageSettings> }>(
+      `/store/kibisettings/store`,
+      { cache: "no-store" }
+    )
+    return {
+      listing_image_width: clampDimension(response.values?.listing_image_width),
+      listing_image_height: clampDimension(response.values?.listing_image_height),
+    }
+  } catch {
+    return EMPTY_LISTING_IMAGE
+  }
+})
 
 const DEFAULT_STORE_NAME = "VipNova"
 

@@ -24,7 +24,16 @@ export const PUBLIC_SETTINGS_FIELDS: {
   [K in PublicSettingsKey]: readonly (keyof SettingsValues[K])[] | null
 } = {
   social: null,
-  store: ["store_name", "legal_name", "email", "phone", "whatsapp", "address"],
+  store: [
+    "store_name",
+    "legal_name",
+    "email",
+    "phone",
+    "whatsapp",
+    "address",
+    "listing_image_width",
+    "listing_image_height",
+  ],
 }
 
 export function isPublicSettingsKey(value: unknown): value is PublicSettingsKey {
@@ -155,6 +164,8 @@ export type StoreSettings = {
   tax_number: string
   maintenance_mode: boolean
   maintenance_message: string
+  listing_image_width: number
+  listing_image_height: number
 }
 
 export type SocialSettings = Record<SocialLink | AppLink, string>
@@ -253,6 +264,8 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
     tax_number: "",
     maintenance_mode: false,
     maintenance_message: "",
+    listing_image_width: 0,
+    listing_image_height: 0,
   },
   social: {
     instagram: "",

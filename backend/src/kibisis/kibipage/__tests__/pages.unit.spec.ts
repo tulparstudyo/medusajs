@@ -5,7 +5,7 @@ import {
   KIBI_PAGE_KEYS,
   slugifyPageKey,
 } from "../types"
-import { CreatePageSchema } from "../validators"
+import { CreatePageSchema, SelectedProductSettingsSchema } from "../validators"
 
 describe("kibipage page helpers and validators", () => {
   it("converts Turkish titles into valid page keys", () => {
@@ -47,6 +47,22 @@ describe("kibipage page helpers and validators", () => {
       label: "",
     })
     expect(invalid.success).toBe(false)
+  })
+
+  it("validates SelectedProductSettingsSchema image dimensions", () => {
+    const defaults = SelectedProductSettingsSchema.parse({})
+    expect(defaults.image_width).toBe(0)
+    expect(defaults.image_height).toBe(0)
+
+    const withDims = SelectedProductSettingsSchema.parse({
+      title: "Öne Çıkanlar",
+      source: "new",
+      limit: 8,
+      image_width: 320,
+      image_height: 400,
+    })
+    expect(withDims.image_width).toBe(320)
+    expect(withDims.image_height).toBe(400)
   })
 })
 

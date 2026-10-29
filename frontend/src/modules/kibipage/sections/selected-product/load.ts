@@ -25,6 +25,8 @@ type SelectedProductSettings = {
   limit: number
   product_ids: string[]
   tag_id: string
+  image_width: number
+  image_height: number
 }
 
 const SOURCE_LABELS: Record<ProductSource, MessageKey> = {
@@ -44,6 +46,51 @@ const FIELDS =
 
 const sources = new Set<string>(SOURCES)
 
+function parseDimension(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0
+  }
+  const truncated = Math.trunc(value)
+  if (truncated <= 0) {
+    return 0
+  }
+  return Math.min(4096, truncated)
+}
+
+export function applyImageDimensions(
+  url: string,
+  width: number,
+  height: number
+): string {
+  if (!url || (width <= 0 && height <= 0)) {
+    return url
+  }
+
+  try {
+    const isRelative = url.startsWith("/") && !url.startsWith("//")
+    const parsed = isRelative ? new URL(url, "http://cdn") : new URL(url)
+    if (width > 0) {
+      parsed.searchParams.set("w", String(width))
+    }
+    if (height > 0) {
+      parsed.searchParams.set("h", String(height))
+    }
+    return isRelative
+      ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+      : parsed.toString()
+  } catch {
+    const params = new URLSearchParams()
+    if (width > 0) {
+      params.set("w", String(width))
+    }
+    if (height > 0) {
+      params.set("h", String(height))
+    }
+    const separator = url.includes("?") ? "&" : "?"
+    return `${url}${separator}${params.toString()}`
+  }
+}
+
 function readSettings(section: StorePageSection, t: Translate): SelectedProductSettings {
   const settings = section.settings ?? {}
   const sourceValue = settings.source
@@ -59,6 +106,8 @@ function readSettings(section: StorePageSection, t: Translate): SelectedProductS
       )
     : []
   const tagId = typeof settings.tag_id === "string" ? settings.tag_id : ""
+  const imageWidth = parseDimension(settings.image_width)
+  const imageHeight = parseDimension(settings.image_height)
 
   return {
     title: title || t(SOURCE_LABELS[source]),
@@ -66,6 +115,8 @@ function readSettings(section: StorePageSection, t: Translate): SelectedProductS
     limit: Math.min(24, Math.max(1, Math.trunc(limit) || 8)),
     product_ids: productIds,
     tag_id: tagId,
+    image_width: imageWidth,
+    image_height: imageHeight,
   }
 }
 
@@ -140,7 +191,7 @@ async function fetchProducts(
 
 function toCard(
   product: HttpTypes.StoreProduct,
-  source: ProductSource,
+  settings: SelectedProductSettings,
   t: Translate
 ): KibisisProduct | null {
   const price = cheapest(product)
@@ -148,6 +199,7 @@ function toCard(
     return null
   }
 
+  const { source, image_width: imageWidth, image_height: imageHeight } = settings
   const onSale = price.original > price.price
   const badge = onSale
     ? { badge: t("badge.sale"), badgeClass: "bg-rose-500" }
@@ -159,6 +211,8 @@ function toCard(
           ? { badge: t("badge.deal"), badgeClass: "bg-orange-500" }
           : { badge: t("badge.product"), badgeClass: "bg-slate-500" }
 
+  const rawImage = product.thumbnail || product.images?.[0]?.url || ""
+
   return {
     id: product.id,
     handle: product.handle ?? "",
@@ -168,7 +222,7 @@ function toCard(
     price: price.price,
     oldPrice: onSale ? price.original : undefined,
     currency: price.currency,
-    image: product.thumbnail || product.images?.[0]?.url || "",
+    image: applyImageDimensions(rawImage, imageWidth, imageHeight),
     imageAlt: product.title ?? "",
     rating: "—",
     reviews: "",
@@ -234,7 +288,7 @@ export async function loadSelectedProducts(
 
   const cards = products
     .slice(0, settings.limit)
-    .map((product) => toCard(product, settings.source, t))
+    .map((product) => toCard(product, settings, t))
     .filter((product): product is KibisisProduct => Boolean(product))
 
   if (!cards.length) {

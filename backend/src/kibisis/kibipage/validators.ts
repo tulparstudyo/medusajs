@@ -177,6 +177,8 @@ export const SelectedProductSettingsSchema = z
     limit: z.number().int().min(1).max(24).default(8),
     product_ids: z.array(z.string().trim().min(1).max(80)).max(50).default([]),
     tag_id: z.string().trim().max(80).default(""),
+    image_width: z.number().int().min(0).max(4096).default(0),
+    image_height: z.number().int().min(0).max(4096).default(0),
   })
   .strict()
 

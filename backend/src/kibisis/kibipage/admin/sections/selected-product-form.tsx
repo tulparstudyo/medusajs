@@ -24,6 +24,17 @@ type TagOption = {
 
 const sources = new Set<string>(PRODUCT_SOURCES)
 
+function clampDimension(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0
+  }
+  const truncated = Math.trunc(value)
+  if (truncated <= 0) {
+    return 0
+  }
+  return Math.min(4096, truncated)
+}
+
 export function readSelectedProduct(
   settings: SectionSettings | null | undefined
 ): SelectedProductSettings {
@@ -38,6 +49,8 @@ export function readSelectedProduct(
     ? settings.product_ids.filter((id): id is string => typeof id === "string" && id.length > 0)
     : []
   const tagId = typeof settings?.tag_id === "string" ? settings.tag_id : ""
+  const imageWidth = clampDimension(settings?.image_width)
+  const imageHeight = clampDimension(settings?.image_height)
 
   return {
     ...emptySelectedProduct(),
@@ -46,6 +59,8 @@ export function readSelectedProduct(
     limit: Math.min(24, Math.max(1, Math.trunc(limit))),
     product_ids: productIds,
     tag_id: tagId,
+    image_width: imageWidth,
+    image_height: imageHeight,
   }
 }
 
@@ -170,6 +185,25 @@ export default function SelectedProductForm({
     onChange({ ...value, product_ids: next })
   }
 
+  const handleDimensionChange = (
+    field: "image_width" | "image_height",
+    raw: string
+  ) => {
+    const trimmed = raw.trim()
+    if (!trimmed) {
+      onChange({ ...value, [field]: 0 })
+      return
+    }
+    const next = Number(trimmed)
+    if (!Number.isFinite(next)) {
+      return
+    }
+    onChange({
+      ...value,
+      [field]: clampDimension(next),
+    })
+  }
+
   return (
     <div className="flex flex-col gap-y-4">
       <div className="flex flex-col gap-y-2">
@@ -227,6 +261,40 @@ export default function SelectedProductForm({
             })
           }}
         />
+      </div>
+      <div className="grid grid-cols-2 gap-x-3">
+        <div className="flex flex-col gap-y-2">
+          <Label htmlFor="selected-product-image-width" size="small">
+            Görsel genişliği (px)
+          </Label>
+          <Input
+            id="selected-product-image-width"
+            type="number"
+            min={1}
+            max={4096}
+            placeholder="Otomatik"
+            value={value.image_width > 0 ? String(value.image_width) : ""}
+            onChange={(event) =>
+              handleDimensionChange("image_width", event.target.value)
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-y-2">
+          <Label htmlFor="selected-product-image-height" size="small">
+            Görsel yüksekliği (px)
+          </Label>
+          <Input
+            id="selected-product-image-height"
+            type="number"
+            min={1}
+            max={4096}
+            placeholder="Otomatik"
+            value={value.image_height > 0 ? String(value.image_height) : ""}
+            onChange={(event) =>
+              handleDimensionChange("image_height", event.target.value)
+            }
+          />
+        </div>
       </div>
       {value.source === "editor" ? (
         <div className="flex flex-col gap-y-2">

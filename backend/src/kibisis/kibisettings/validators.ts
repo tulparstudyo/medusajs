@@ -63,6 +63,18 @@ export const StoreSettingsSchema = z
     ),
     maintenance_mode: z.boolean().default(false),
     maintenance_message: text(300),
+    listing_image_width: z
+      .number()
+      .int()
+      .min(0, "Genişlik negatif olamaz.")
+      .max(4096, "Genişlik en fazla 4096 px olabilir.")
+      .default(0),
+    listing_image_height: z
+      .number()
+      .int()
+      .min(0, "Yükseklik negatif olamaz.")
+      .max(4096, "Yükseklik en fazla 4096 px olabilir.")
+      .default(0),
   })
   .strict()
 
