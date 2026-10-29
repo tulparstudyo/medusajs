@@ -60,9 +60,17 @@ export async function installPaymentProvider(repo: string): Promise<PaymentInsta
 
   const archive = Buffer.from(await response.arrayBuffer())
   const expected = response.headers.get("x-kibisis-sha256")
+  const actual = createHash("sha256").update(archive).digest("hex")
 
-  if (!expected || createHash("sha256").update(archive).digest("hex") !== expected.toLowerCase()) {
-    invalid("İndirilen paketin özeti lisans sunucusunun bildirdiğiyle uyuşmuyor.")
+  if (archive.length < 4 || archive[0] !== 0x50 || archive[1] !== 0x4b) {
+    const preview = archive.slice(0, 300).toString("utf8")
+    invalid(`Lisans sunucusundan geçerli bir paket arşivi alınamadı: ${preview}`)
+  }
+
+  if (expected && actual !== expected.toLowerCase()) {
+    invalid(
+      `İndirilen paketin özeti lisans sunucusunun bildirdiğiyle uyuşmuyor (beklenen: ${expected}, hesaplanan: ${actual}).`
+    )
   }
 
   let files: Map<string, Buffer>
