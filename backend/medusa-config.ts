@@ -65,6 +65,17 @@ module.exports = defineConfig({
       },
     },
     {
+      resolve: "@medusajs/medusa/payment",
+      options: {
+        providers: [
+          {
+            resolve: "./src/kibisis/kibipayment",
+            id: "default",
+          },
+        ],
+      },
+    },
+    {
       resolve: "./src/kibisis/kibinav",
     },
     {

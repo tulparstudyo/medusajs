@@ -1,7 +1,9 @@
 import { MedusaService } from "@medusajs/framework/utils"
 
+import { registerKibisettingsService } from "./bridge"
 import SettingsRecord from "./models/settings-record"
 import { carrierDefaults, carrierSecretFields } from "../kibicarrier/settings"
+import { paymentDefaults, paymentSecretFields } from "../kibipayment/settings"
 import {
   SECRET_FIELDS,
   SETTINGS_DEFAULTS,
@@ -18,9 +20,16 @@ type SettingsRow = {
   updated_at?: Date | string | null
 }
 
-class KibisettingsModuleService extends MedusaService({
+const KibisettingsBase = MedusaService({
   SettingsRecord,
-}) {
+})
+
+class KibisettingsModuleService extends KibisettingsBase {
+  constructor(...args: ConstructorParameters<typeof KibisettingsBase>) {
+    super(...args)
+    registerKibisettingsService(this)
+  }
+
   async getSettings<K extends SettingsKey>(key: K): Promise<SettingsDTO<K>> {
     return present(key, await this.findRow(key))
   }
@@ -37,9 +46,9 @@ class KibisettingsModuleService extends MedusaService({
   ): Promise<SettingsDTO<K>> {
     const row = await this.findRow(key)
     const secrets = secretFieldsOf(key)
-    // Keeps the values of carrier packages that are not installed right now.
+    // Keeps the values of carrier/payment packages that are not installed right now.
     const next: Record<string, unknown> = {
-      ...(key === "carriers" ? plainObject(row?.values) : {}),
+      ...(key === "carriers" || key === "payment" ? plainObject(row?.values) : {}),
       ...readValues(key, row?.values),
     }
     const known = defaultsOf(key)
@@ -87,11 +96,15 @@ class KibisettingsModuleService extends MedusaService({
 }
 
 function defaultsOf(key: SettingsKey): Record<string, unknown> {
-  return key === "carriers" ? carrierDefaults() : (SETTINGS_DEFAULTS[key] as Record<string, unknown>)
+  if (key === "carriers") return carrierDefaults()
+  if (key === "payment") return paymentDefaults()
+  return SETTINGS_DEFAULTS[key] as Record<string, unknown>
 }
 
 function secretFieldsOf(key: SettingsKey): readonly string[] {
-  return key === "carriers" ? carrierSecretFields() : (SECRET_FIELDS[key] as readonly string[])
+  if (key === "carriers") return carrierSecretFields()
+  if (key === "payment") return paymentSecretFields()
+  return SECRET_FIELDS[key] as readonly string[]
 }
 
 function plainObject(value: unknown): Record<string, unknown> {

@@ -23,6 +23,7 @@ import { CreateBatchSchema, StartBatchSchema } from "../kibisis/kibijson/validat
 import { ImportCategoriesSchema, RebuildHandlesSchema } from "../kibisis/kibicategory/validators"
 import { AssignGroupSchema } from "../kibisis/kibigroup/validators"
 import { CreateShipmentSchema, InstallCarrierSchema } from "../kibisis/kibicarrier/validators"
+import { InstallPaymentSchema } from "../kibisis/kibipayment/validators"
 import { SETTINGS_KEYS } from "../kibisis/kibisettings/types"
 import { SETTINGS_SCHEMAS } from "../kibisis/kibisettings/validators"
 import {
@@ -138,6 +139,11 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/kibicarrier/install",
       middlewares: [validateAndTransformBody(InstallCarrierSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibipayment/install",
+      middlewares: [validateAndTransformBody(InstallPaymentSchema)],
     },
     {
       method: ["POST"],

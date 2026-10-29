@@ -1,6 +1,6 @@
 "use client"
 
-import { isManual, isStripeLike } from "@lib/constants"
+import { isKibipayment, isManual, isStripeLike } from "@lib/constants"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -28,6 +28,14 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   const paymentSession = cart.payment_collection?.payment_sessions?.[0]
 
   switch (true) {
+    case isKibipayment(paymentSession?.provider_id):
+      return (
+        <KibipaymentButton
+          cart={cart}
+          notReady={notReady}
+          data-testid={dataTestId}
+        />
+      )
     case isStripeLike(paymentSession?.provider_id):
       return (
         <StripePaymentButton
@@ -43,6 +51,71 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     default:
       return <Button disabled>Select a payment method</Button>
   }
+}
+
+const KibipaymentButton = ({
+  cart,
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  cart: HttpTypes.StoreCart
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const session = cart.payment_collection?.payment_sessions?.find(
+    (s) => isKibipayment(s.provider_id)
+  )
+  const presentation = (session?.data as Record<string, unknown>)?.presentation as
+    | Record<string, unknown>
+    | undefined
+
+  const onPaymentCompleted = async () => {
+    await placeOrder()
+      .catch((err) => {
+        setErrorMessage(err.message)
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
+  }
+
+  const handlePayment = () => {
+    setSubmitting(true)
+
+    if (presentation?.redirectUrl) {
+      window.location.href = String(presentation.redirectUrl)
+      return
+    }
+
+    if (presentation?.paymentPageUrl) {
+      window.location.href = String(presentation.paymentPageUrl)
+      return
+    }
+
+    onPaymentCompleted()
+  }
+
+  return (
+    <>
+      <Button
+        disabled={notReady}
+        isLoading={submitting}
+        onClick={handlePayment}
+        size="large"
+        data-testid={dataTestId}
+      >
+        {presentation?.redirectUrl || presentation?.paymentPageUrl
+          ? "Güvenli Ödeme Sayfasına Git"
+          : "Siparişi Tamamla"}
+      </Button>
+      <ErrorMessage
+        error={errorMessage}
+        data-testid="kibipayment-error-message"
+      />
+    </>
+  )
 }
 
 const StripePaymentButton = ({
@@ -104,8 +177,6 @@ const StripePaymentButton = ({
             },
           },
         },
-        // Only leave the site when the selected method actually requires it, so
-        // card payments still complete inline.
         redirect: "if_required",
       })
       .then(({ error, paymentIntent }) => {

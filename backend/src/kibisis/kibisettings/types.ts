@@ -117,6 +117,10 @@ export function carrierField(carrier: string, field: string): string {
   return `${carrier}_${field}`
 }
 
+export function paymentField(provider: string, field: string): string {
+  return `${provider}_${field}`
+}
+
 export const SOCIAL_LINKS = ["instagram", "youtube", "tiktok", "facebook", "x", "linkedin"] as const
 export type SocialLink = (typeof SOCIAL_LINKS)[number]
 
@@ -164,21 +168,7 @@ export type StoreSettings = {
 
 export type SocialSettings = Record<SocialLink | AppLink, string>
 
-export type PaymentSettings = {
-  card_enabled: boolean
-  card_provider: PaymentProvider
-  card_mode: PaymentMode
-  card_merchant_id: string
-  card_api_key: string
-  card_secret_key: string
-  installments_enabled: boolean
-  max_installments: number
-  bank_transfer_enabled: boolean
-  bank_transfer_info: string
-  bank_transfer_discount: number
-  cod_enabled: boolean
-  cod_fee: number
-}
+export type PaymentSettings = Record<string, string | boolean | number>
 
 export type SmtpSettings = {
   enabled: boolean
@@ -219,15 +209,15 @@ export type SettingsValues = {
   translate: TranslateSettings
 }
 
-export type SecretField<K extends SettingsKey> = K extends "carriers"
+export type SecretField<K extends SettingsKey> = K extends "carriers" | "payment"
   ? string
   : (typeof SECRET_FIELDS)[K][number] & keyof SettingsValues[K]
 
-/** Carrier secrets are declared by each package and resolved on the server. */
+/** Carrier and payment secrets are declared by each package and resolved on the server. */
 export const SECRET_FIELDS = {
   store: [],
   social: [],
-  payment: ["card_api_key", "card_secret_key"],
+  payment: [],
   carriers: [],
   smtp: ["password"],
   translate: ["google_api_key", "google_service_account", "gemini_api_key"],
@@ -260,14 +250,6 @@ export const SETTINGS_DEFAULTS: SettingsValues = {
     app_gallery: "",
   },
   payment: {
-    card_enabled: false,
-    card_provider: "iyzico",
-    card_mode: "test",
-    card_merchant_id: "",
-    card_api_key: "",
-    card_secret_key: "",
-    installments_enabled: false,
-    max_installments: 6,
     bank_transfer_enabled: false,
     bank_transfer_info: "",
     bank_transfer_discount: 0,

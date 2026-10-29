@@ -293,22 +293,27 @@ export async function setShippingMethod({
     .catch(medusaError)
 }
 
+/**
+ * Returns the failure instead of throwing: errors thrown from a server action
+ * are redacted in production builds (React error #441), so the checkout
+ * could not show why the payment provider refused the session.
+ */
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
   data: HttpTypes.StoreInitializePaymentSession
-) {
+): Promise<CartActionResult> {
   const headers = {
     ...(await getAuthHeaders()),
   }
 
-  return sdk.store.payment
-    .initiatePaymentSession(cart, data, {}, headers)
-    .then(async (resp) => {
-      const cartCacheTag = await getCacheTag("carts")
-      revalidateTag(cartCacheTag, { expire: 0 })
-      return resp
-    })
-    .catch(medusaError)
+  try {
+    await sdk.store.payment.initiatePaymentSession(cart, data, {}, headers)
+    const cartCacheTag = await getCacheTag("carts")
+    revalidateTag(cartCacheTag, { expire: 0 })
+    return { ok: true }
+  } catch (error) {
+    return toCartActionError(error)
+  }
 }
 
 export async function applyPromotions(codes: string[]) {

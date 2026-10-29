@@ -84,6 +84,7 @@ export const ru: Messages = {
   "toast.cannot_add": "Этот товар нельзя добавить в корзину",
   "toast.no_country": "Не найдена страна сеанса",
   "toast.add_failed": "Не удалось добавить в корзину",
+  "toast.insufficient_stock": "Недостаточно товара на складе",
   "toast.removed": "Товар удалён из корзины",
   "toast.remove_failed": "Не удалось удалить товар",
   "toast.quantity_failed": "Не удалось изменить количество",

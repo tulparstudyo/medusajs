@@ -1,11 +1,13 @@
 import { z } from "@medusajs/framework/zod"
 
 import { installedCarriers } from "../kibicarrier/registry"
+import { installedProviders } from "../kibipayment/registry"
 import {
   APP_LINK_LABELS,
   APP_LINKS,
   carrierField,
   GOOGLE_AUTH_MODES,
+  paymentField,
   PAYMENT_MODES,
   PAYMENT_PROVIDERS,
   SettingsKey,
@@ -89,16 +91,8 @@ for (const link of APP_LINKS) {
 
 export const SocialSettingsSchema = z.object(socialShape).strict()
 
-export const PaymentSettingsSchema = z
-  .object({
-    card_enabled: z.boolean().default(false),
-    card_provider: z.enum(PAYMENT_PROVIDERS).default("iyzico"),
-    card_mode: z.enum(PAYMENT_MODES).default("test"),
-    card_merchant_id: text(120),
-    card_api_key: secret,
-    card_secret_key: secret,
-    installments_enabled: z.boolean().default(false),
-    max_installments: z.number().int().min(1).max(12, "En fazla 12 taksit.").default(6),
+export function paymentSettingsSchema() {
+  const shape: Record<string, z.ZodType> = {
     bank_transfer_enabled: z.boolean().default(false),
     bank_transfer_info: text(2000),
     bank_transfer_discount: z
@@ -108,8 +102,31 @@ export const PaymentSettingsSchema = z
       .default(0),
     cod_enabled: z.boolean().default(false),
     cod_fee: money(100_000),
-  })
-  .strict()
+    // Backward compatibility fields for legacy flat settings:
+    card_enabled: z.boolean().optional(),
+    card_provider: z.enum(PAYMENT_PROVIDERS).optional(),
+    card_mode: z.enum(PAYMENT_MODES).optional(),
+    card_merchant_id: text(120).optional(),
+    card_api_key: secret,
+    card_secret_key: secret,
+    installments_enabled: z.boolean().optional(),
+    max_installments: z.number().int().min(1).max(12).optional(),
+  }
+
+  for (const { definition } of installedProviders().providers) {
+    const field = (name: string) => paymentField(definition.id, name)
+    shape[field("enabled")] = z.boolean().default(false)
+    shape[field("test_mode")] = z.boolean().default(true)
+    shape[field("installments_enabled")] = z.boolean().default(false)
+    shape[field("max_installments")] = z.number().int().min(1).max(12, "En fazla 12 taksit.").default(6)
+
+    for (const credential of definition.credentials) {
+      shape[field(credential.key)] = credential.secret ? secret : text(200)
+    }
+  }
+
+  return z.object(shape).passthrough()
+}
 
 /** Built per request: carriers can be installed while the server runs. */
 export function carrierSettingsSchema() {
@@ -200,7 +217,7 @@ export const TranslateSettingsSchema = z
 export const SETTINGS_SCHEMAS = {
   store: StoreSettingsSchema,
   social: SocialSettingsSchema,
-  payment: PaymentSettingsSchema,
+  payment: paymentSettingsSchema,
   carriers: carrierSettingsSchema,
   smtp: SmtpSettingsSchema,
   translate: TranslateSettingsSchema,
