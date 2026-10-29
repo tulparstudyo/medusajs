@@ -17,9 +17,6 @@ export default async function KibisisStaticPage({
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-      <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">
-        {page.label}
-      </h1>
       {page.sections.length > 0 ? (
         page.sections.map((section) => (
           <SectionSlot
