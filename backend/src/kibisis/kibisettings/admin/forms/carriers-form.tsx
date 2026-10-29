@@ -251,6 +251,7 @@ function Marketplace({ catalog, installer }: { catalog: CarrierCatalogDTO; insta
   }
 
   return (
+    
     <FieldGroup
       title="Kargo firması paketleri"
       description={`Lisanslı paketler ${catalog.domain} domaini doğrulanarak lisans sunucusundan kurulur.`}

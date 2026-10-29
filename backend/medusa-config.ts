@@ -1,14 +1,17 @@
 import path from "path"
 import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
-loadEnv(process.env.NODE_ENV || 'development', process.cwd())
-
 // `medusa start` loads the compiled copy from .medusa/server, so resolve paths
 // from the backend folder in both cases.
 const BACKEND_DIR =
   path.basename(path.dirname(__dirname)) === ".medusa"
     ? path.resolve(__dirname, "../..")
     : __dirname
+
+loadEnv(process.env.NODE_ENV || 'development', BACKEND_DIR)
+if (process.cwd() !== BACKEND_DIR) {
+  loadEnv(process.env.NODE_ENV || 'development', process.cwd())
+}
 
 const CDN_PORT = process.env.CDN_PORT || "9080"
 const CDN_URL = process.env.CDN_URL || `http://localhost:${CDN_PORT}`
