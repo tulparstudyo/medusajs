@@ -1,10 +1,7 @@
-import {
-  getPageSections,
-  STORE_PAGE_LABELS,
-  StorePageKey,
-} from "@lib/data/pages"
+import { notFound } from "next/navigation"
 
-import SectionSlot from "../home/section-slot"
+import { getPageSections, StorePageKey } from "./pages"
+import SectionSlot from "./section-slot"
 
 export default async function KibisisStaticPage({
   pageKey,
@@ -14,11 +11,14 @@ export default async function KibisisStaticPage({
   countryCode: string
 }) {
   const page = await getPageSections(pageKey)
+  if (!page.exists) {
+    notFound()
+  }
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
       <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">
-        {STORE_PAGE_LABELS[pageKey]}
+        {page.label}
       </h1>
       {page.sections.length > 0 ? (
         page.sections.map((section) => (
@@ -34,3 +34,4 @@ export default async function KibisisStaticPage({
     </main>
   )
 }
+

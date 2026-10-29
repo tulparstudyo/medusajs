@@ -1,6 +1,7 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, getVariantAvailability } from "@medusajs/framework/utils"
 
+import { resolveCdnUrl } from "../../cdn/url"
 import { AdminGroupItem, GroupMember, StoreGroupItem } from "../types"
 
 type Query = {
@@ -28,14 +29,14 @@ function text(value: unknown): string {
 function thumbnailOf(row: Record<string, unknown>): string | null {
   const thumbnail = text(row.thumbnail)
   if (thumbnail) {
-    return thumbnail
+    return resolveCdnUrl(thumbnail)
   }
 
   const images = Array.isArray(row.images) ? row.images : []
   for (const image of images) {
     const url = text((image as { url?: unknown } | null)?.url)
     if (url) {
-      return url
+      return resolveCdnUrl(url)
     }
   }
 

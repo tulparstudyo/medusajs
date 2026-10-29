@@ -1,4 +1,4 @@
-import { themeIconHtml } from "../../icon-html"
+import { themeIconHtml } from "@theme/kibisis/icon-html"
 import "server-only"
 
 import { readFileSync } from "node:fs"
@@ -70,7 +70,7 @@ export function renderIconBox(instanceId: string, settings: unknown) {
   }
 
   const template = readFileSync(
-    path.join(process.cwd(), "src/theme/kibisis/sections/icon-box/index.html"),
+    path.join(process.cwd(), "src/modules/kibipage/sections/icon-box/index.html"),
     "utf8"
   )
   const itemTemplate = part(template, "item")

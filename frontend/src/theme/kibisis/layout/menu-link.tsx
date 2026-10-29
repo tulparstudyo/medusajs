@@ -13,7 +13,7 @@ export default function MenuLink({
     return <span className={className}>{item.label}</span>
   }
 
-  if (item.target_type === "category") {
+  if (item.target_type === "category" || item.href.startsWith("/")) {
     return (
       <LocalizedClientLink href={item.href} className={className}>
         {item.label}

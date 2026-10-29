@@ -5,7 +5,7 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import dynamic from "next/dynamic"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { PointerEvent, ReactNode, useEffect, useMemo, useState } from "react"
+import { PointerEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import type { Translate } from "../i18n"
 import { useMoney, useT } from "../i18n/client"
@@ -318,7 +318,58 @@ export default function ProductOverview({
   const image = gallery[imageIndex]
   const stepImage = (step: number) =>
     setActiveImage((imageIndex + step + gallery.length) % gallery.length)
+
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
+  const justSwipedRef = useRef(false)
+  const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  useEffect(() => {
+    const activeBtn = thumbnailRefs.current[imageIndex]
+    if (activeBtn) {
+      activeBtn.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      })
+    }
+  }, [imageIndex])
+
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        time: Date.now(),
+      }
+    }
+  }
+
+  const handleTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current || e.changedTouches.length === 0) {
+      return
+    }
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x
+    const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y
+    const deltaTime = Date.now() - touchStartRef.current.time
+    touchStartRef.current = null
+
+    if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && deltaTime < 600) {
+      justSwipedRef.current = true
+      setTimeout(() => {
+        justSwipedRef.current = false
+      }, 150)
+      if (deltaX < 0) {
+        stepImage(1)
+      } else {
+        stepImage(-1)
+      }
+    }
+  }
+
   const openLightbox = () => {
+    if (justSwipedRef.current) {
+      return
+    }
     setHoverZoom(null)
     setLightboxLoaded(true)
     setLightboxOpen(true)
@@ -375,11 +426,13 @@ export default function ProductOverview({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-5 mx-auto w-full max-w-[480px] bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <div
-            className={`relative w-full aspect-[2/3] max-h-[670px] bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center ${
+            className={`relative w-full aspect-[2/3] max-h-[670px] bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center select-none ${
               image ? "cursor-zoom-in" : ""
             }`}
             onPointerMove={image ? trackZoom : undefined}
             onPointerLeave={() => setHoverZoom(null)}
+            onTouchStart={gallery.length > 1 ? handleTouchStart : undefined}
+            onTouchEnd={gallery.length > 1 ? handleTouchEnd : undefined}
           >
             {image ? (
               <>
@@ -418,7 +471,7 @@ export default function ProductOverview({
                   type="button"
                   data-gallery-control
                   aria-label={t("product.previous_image")}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors z-10"
                   onClick={() => stepImage(-1)}
                 >
                   <ThemeIcon name="chevron-left" className="h-5 w-5" />
@@ -427,29 +480,42 @@ export default function ProductOverview({
                   type="button"
                   data-gallery-control
                   aria-label={t("product.next_image")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-orange-600 shadow-md border border-slate-200 flex items-center justify-center transition-colors z-10"
                   onClick={() => stepImage(1)}
                 >
                   <ThemeIcon name="chevron-right" className="h-5 w-5" />
                 </button>
+                <div className="absolute bottom-3 right-3 pointer-events-none z-10 bg-slate-900/75 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1 select-none">
+                  <span>{imageIndex + 1}</span>
+                  <span className="text-white/60">/</span>
+                  <span>{gallery.length}</span>
+                </div>
               </>
             ) : null}
           </div>
           {gallery.length > 1 ? (
-            <div className="grid grid-cols-6 gap-2">
-              {gallery.map((thumb, index) => (
-                <button
-                  key={thumb.id}
-                  type="button"
-                  className={`aspect-[2/3] rounded-lg overflow-hidden border-2 bg-slate-100 ${
-                    index === imageIndex ? "border-orange-600" : "border-slate-200"
-                  }`}
-                  onClick={() => setActiveImage(index)}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={thumb.url} alt="" className="w-full h-full object-contain" />
-                </button>
-              ))}
+            <div className="relative w-full">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 scroll-smooth">
+                {gallery.map((thumb, index) => (
+                  <button
+                    key={thumb.id}
+                    ref={(el) => {
+                      thumbnailRefs.current[index] = el
+                    }}
+                    type="button"
+                    aria-label={`${t("product.gallery")} ${index + 1}`}
+                    className={`aspect-[2/3] w-14 sm:w-16 shrink-0 rounded-lg overflow-hidden border-2 bg-slate-100 transition-all ${
+                      index === imageIndex
+                        ? "border-orange-600 ring-2 ring-orange-600/20 shadow-xs"
+                        : "border-slate-200 hover:border-slate-400 opacity-70 hover:opacity-100"
+                    }`}
+                    onClick={() => setActiveImage(index)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={thumb.url} alt="" className="w-full h-full object-contain" />
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>

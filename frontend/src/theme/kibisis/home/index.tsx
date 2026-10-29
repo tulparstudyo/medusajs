@@ -1,6 +1,4 @@
-import { getPageSections } from "@lib/data/pages"
-
-import SectionSlot from "./section-slot"
+import { getPageSections, SectionSlot } from "@modules/kibipage"
 
 export default async function KibisisHome({
   countryCode,

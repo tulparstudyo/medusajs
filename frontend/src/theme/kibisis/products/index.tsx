@@ -2,12 +2,15 @@ import { HttpTypes } from "@medusajs/types"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 
-import { getPageSections } from "@lib/data/pages"
+import {
+  getPageSections,
+  sectionInstallments,
+  sectionPlacement,
+  SectionSlot,
+} from "@modules/kibipage"
 import { getProductColors } from "@lib/data/product-colors"
-import SectionSlot from "../home/section-slot"
 import { ProductBreadcrumbs, ProductDetails } from "./info"
 import ProductOverview from "./overview"
-import { sectionInstallments, sectionPlacement } from "./placement"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct

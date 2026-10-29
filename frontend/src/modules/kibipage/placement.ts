@@ -1,4 +1,4 @@
-import type { StorePageSection } from "@lib/data/pages"
+import type { StorePageSection } from "./pages"
 
 export type ProductPlacement = "buy" | "aside" | "below"
 
@@ -21,3 +21,4 @@ export function sectionInstallments(section: StorePageSection): number {
 
   return value
 }
+

@@ -24,7 +24,7 @@ import { getLocale } from "./locale-actions"
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
   fields ??=
-    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name"
+    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name, +completed_at"
 
   if (!id) {
     return null
@@ -48,7 +48,9 @@ export async function retrieveCart(cartId?: string, fields?: string) {
       next,
       cache: "force-cache",
     })
-    .then(({ cart }: { cart: HttpTypes.StoreCart }) => cart)
+    .then(({ cart }: { cart: HttpTypes.StoreCart }) =>
+      (cart as { completed_at?: string | null })?.completed_at ? null : cart
+    )
     .catch(() => null)
 }
 
@@ -59,7 +61,7 @@ export async function getOrSetCart(countryCode: string) {
     throw new Error(`Region not found for country code: ${countryCode}`)
   }
 
-  let cart = await retrieveCart(undefined, "id,region_id")
+  let cart = await retrieveCart(undefined, "id,region_id,completed_at")
 
   const headers = {
     ...(await getAuthHeaders()),
@@ -416,9 +418,11 @@ export async function placeOrder(cartId?: string) {
       cartRes.order.shipping_address?.country_code?.toLowerCase()
 
     const orderCacheTag = await getCacheTag("orders")
-    revalidateTag(orderCacheTag, { expire: 0 })
+    if (orderCacheTag) {
+      revalidateTag(orderCacheTag, { expire: 0 })
+    }
 
-    removeCartId()
+    await removeCartId()
     redirect(`/${countryCode}/order/${cartRes?.order.id}/confirmed`)
   }
 
@@ -439,16 +443,26 @@ export async function updateRegion(countryCode: string, currentPath: string) {
   }
 
   if (cartId) {
-    await updateCart({ region_id: region.id })
+    try {
+      await updateCart({ region_id: region.id })
+    } catch {
+      await removeCartId()
+    }
     const cartCacheTag = await getCacheTag("carts")
-    revalidateTag(cartCacheTag, { expire: 0 })
+    if (cartCacheTag) {
+      revalidateTag(cartCacheTag, { expire: 0 })
+    }
   }
 
   const regionCacheTag = await getCacheTag("regions")
-  revalidateTag(regionCacheTag, { expire: 0 })
+  if (regionCacheTag) {
+    revalidateTag(regionCacheTag, { expire: 0 })
+  }
 
   const productsCacheTag = await getCacheTag("products")
-  revalidateTag(productsCacheTag, { expire: 0 })
+  if (productsCacheTag) {
+    revalidateTag(productsCacheTag, { expire: 0 })
+  }
 
   redirect(`/${countryCode}${currentPath}`)
 }

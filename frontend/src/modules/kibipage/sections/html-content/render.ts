@@ -29,7 +29,7 @@ export function renderHtmlContent(
   }
 
   const template = readFileSync(
-    path.join(process.cwd(), "src/theme/kibisis/sections/html-content/index.html"),
+    path.join(process.cwd(), "src/modules/kibipage/sections/html-content/index.html"),
     "utf8"
   )
 

@@ -2,6 +2,8 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { MedusaError } from "@medusajs/framework/utils"
 import { uploadFilesWorkflow } from "@medusajs/medusa/core-flows"
 
+import { stripCdnUrl } from "../../cdn/url"
+
 const SECTION_ROOT = "sections"
 
 const EXTENSIONS: Record<string, string> = {
@@ -90,5 +92,5 @@ export async function uploadSectionFile(
     )
   }
 
-  return { url: file.url, key: file.id }
+  return { url: stripCdnUrl(file.url), key: file.id }
 }

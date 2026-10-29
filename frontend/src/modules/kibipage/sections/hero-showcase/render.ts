@@ -1,5 +1,5 @@
-import { themeIconHtml } from "../../icon-html"
-import { translateTemplate, type Translate } from "../../i18n"
+import { themeIconHtml } from "@theme/kibisis/icon-html"
+import { translateTemplate, type Translate } from "@theme/kibisis/i18n"
 import "server-only"
 
 import { readFileSync } from "node:fs"
@@ -143,7 +143,7 @@ export function renderHeroShowcase(instanceId: string, settings: unknown, t: Tra
 
   const template = translateTemplate(
     readFileSync(
-      path.join(process.cwd(), "src/theme/kibisis/sections/hero-showcase/index.html"),
+      path.join(process.cwd(), "src/modules/kibipage/sections/hero-showcase/index.html"),
       "utf8"
     ),
     t

@@ -68,12 +68,24 @@ export function normalizeUrl(value: string | undefined): string {
 
 export function normalizeAnchor(value: string | undefined): string {
   const trimmed = value?.trim() ?? ""
+
+  if (trimmed.startsWith("/")) {
+    if (trimmed.startsWith("//") || /\s/.test(trimmed)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "Sayfa içi bağlantı / veya # ile başlamalıdır. Örnek: /static/hakkimizda veya #hedef"
+      )
+    }
+
+    return trimmed
+  }
+
   const anchor = trimmed.startsWith("#") ? trimmed : `#${trimmed}`
 
   if (!ANCHOR_PATTERN.test(anchor)) {
     throw new MedusaError(
       MedusaError.Types.INVALID_DATA,
-      "Sayfa içi bağlantı # ile başlamalı ve harf, rakam, - veya _ içermelidir. Örnek: #hedef"
+      "Sayfa içi bağlantı / veya # ile başlamalıdır. Örnek: /static/hakkimizda veya #hedef"
     )
   }
 

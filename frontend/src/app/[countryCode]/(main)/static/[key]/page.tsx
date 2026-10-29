@@ -1,11 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import {
-  isStorePageKey,
-  STORE_PAGE_LABELS,
-  StorePageKey,
-} from "@lib/data/pages"
+import { getPageSections, isStorePageKey } from "@modules/kibipage"
 import { theme } from "@theme"
 
 const StaticPage = theme.staticPage
@@ -14,23 +10,31 @@ type Props = {
   params: Promise<{ countryCode: string; key: string }>
 }
 
+function isStaticRouteKey(key: string): boolean {
+  return isStorePageKey(key) && key !== "home" && key !== "product"
+}
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { key } = await props.params
-  if (!isStorePageKey(key)) {
+  if (!isStaticRouteKey(key)) {
     return { title: "Sayfa bulunamadı" }
   }
 
-  const title = STORE_PAGE_LABELS[key as StorePageKey]
+  const page = await getPageSections(key)
+  if (!page.exists) {
+    return { title: "Sayfa bulunamadı" }
+  }
+
   return {
-    title,
-    description: title,
+    title: page.label,
+    description: page.label,
   }
 }
 
 export default async function Page(props: Props) {
   const { countryCode, key } = await props.params
 
-  if (!isStorePageKey(key)) {
+  if (!isStaticRouteKey(key)) {
     notFound()
   }
 

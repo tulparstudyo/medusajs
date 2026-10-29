@@ -1,5 +1,7 @@
 import { MedusaError } from "@medusajs/framework/utils"
 
+import { transformSectionSettingsCdn } from "../../cdn/url"
+
 import {
   EmptySettingsSchema,
   HeroShowcaseSettingsSchema,
@@ -80,7 +82,7 @@ export function normalizeSettings(
 ): SectionSettings {
   const { content: withoutTranslations, translations } = takeTranslations(settings)
   const { content, layout } = takeLayout(withoutTranslations)
-  const parsed = parseSettings(type, content)
+  const parsed = parseSettings(type, transformSectionSettingsCdn(content, "strip"))
   const next = putLayout(parsed, layout)
   const cleaned = cleanTranslations(type, parsed, translations)
 

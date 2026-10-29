@@ -1,4 +1,4 @@
-import { themeIconHtml } from "../../icon-html"
+import { themeIconHtml } from "@theme/kibisis/icon-html"
 import "server-only"
 
 import { readFileSync } from "node:fs"
@@ -82,7 +82,7 @@ export function renderFastLinks(instanceId: string, settings: unknown) {
     typeof source.variant === "string" && VARIANTS.has(source.variant) ? source.variant : "outline"
   const title = typeof source.title === "string" ? source.title.trim() : ""
   const template = readFileSync(
-    path.join(process.cwd(), "src/theme/kibisis/sections/fast-links/index.html"),
+    path.join(process.cwd(), "src/modules/kibipage/sections/fast-links/index.html"),
     "utf8"
   )
   const itemTemplate = part(template, "item")

@@ -2,10 +2,10 @@ import { sdk } from "@lib/config"
 import { getRegion } from "@lib/data/regions"
 import { HttpTypes } from "@medusajs/types"
 
-import type { KibisisProduct } from "../../home/data/products"
-import type { StorePageSection } from "@lib/data/pages"
-import type { MessageKey, Translate } from "../../i18n"
-import { getKibiI18n } from "../../i18n/server"
+import type { KibisisProduct } from "@theme/kibisis/home/data/products"
+import type { StorePageSection } from "../../pages"
+import type { MessageKey, Translate } from "@theme/kibisis/i18n"
+import { getKibiI18n } from "@theme/kibisis/i18n/server"
 
 const SOURCES = [
   "new",

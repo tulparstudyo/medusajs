@@ -1,5 +1,5 @@
-import type { StorePageSection } from "@lib/data/pages"
-import ProductRail from "../../home/product-rail"
+import type { StorePageSection } from "../../pages"
+import ProductRail from "@theme/kibisis/home/product-rail"
 import { loadSelectedProducts } from "./load"
 
 export default async function SelectedProductSection({

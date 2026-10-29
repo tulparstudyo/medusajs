@@ -1,5 +1,5 @@
-import { themeIconHtml } from "../../icon-html"
-import { translateTemplate, type Translate } from "../../i18n"
+import { themeIconHtml } from "@theme/kibisis/icon-html"
+import { translateTemplate, type Translate } from "@theme/kibisis/i18n"
 import "server-only"
 
 import { readFileSync } from "node:fs"
@@ -82,7 +82,7 @@ export function renderPromoBanner(instanceId: string, settings: unknown, t: Tran
     typeof source.layout === "string" && LAYOUTS.has(source.layout) ? source.layout : "grid"
   const template = translateTemplate(
     readFileSync(
-      path.join(process.cwd(), "src/theme/kibisis/sections/promo-banner/index.html"),
+      path.join(process.cwd(), "src/modules/kibipage/sections/promo-banner/index.html"),
       "utf8"
     ),
     t

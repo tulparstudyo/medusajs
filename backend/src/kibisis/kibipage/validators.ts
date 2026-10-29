@@ -6,7 +6,7 @@ import {
   FAST_LINK_VARIANTS,
   ICON_BOX_TONES,
   isSectionIcon,
-  KIBI_PAGE_KEYS,
+  PAGE_KEY_PATTERN,
   PRODUCT_SOURCES,
   QUICK_CATEGORY_TONES,
   SECTION_TYPES,
@@ -182,7 +182,28 @@ export const SelectedProductSettingsSchema = z
 
 export const EmptySettingsSchema = z.object({}).strict()
 
-export const PageKeySchema = z.enum(KIBI_PAGE_KEYS)
+export const PageKeySchema = z
+  .string()
+  .trim()
+  .min(1, "Sayfa anahtarı gerekli.")
+  .max(80, "Sayfa anahtarı en fazla 80 karakter olabilir.")
+  .regex(
+    PAGE_KEY_PATTERN,
+    "Sayfa anahtarı yalnızca küçük harf, rakam ve tire içerebilir."
+  )
+
+export const CreatePageSchema = z
+  .object({
+    page_key: PageKeySchema,
+    label: z
+      .string()
+      .trim()
+      .min(1, "Sayfa adı gerekli.")
+      .max(120, "Sayfa adı en fazla 120 karakter olabilir."),
+  })
+  .strict()
+
+export const UpdatePageSchema = CreatePageSchema
 
 export const CreateSectionSchema = z
   .object({

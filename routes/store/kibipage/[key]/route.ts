@@ -12,10 +12,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const service = req.scope.resolve<KibipageModuleService>(KIBIPAGE_MODULE)
-  const sections = await service.listPublicSections(parsed.data, req.locale)
+  const page = await service.getPublicPage(parsed.data, req.locale)
 
-  res.json({
-    page_key: parsed.data,
-    sections,
-  })
+  res.json(page)
 }

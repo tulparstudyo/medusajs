@@ -2,6 +2,7 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { deleteFilesWorkflow, uploadFilesWorkflow } from "@medusajs/medusa/core-flows"
 
+import { stripCdnUrl } from "../cdn/url"
 import { HttpStatusException, ImportException } from "./errors"
 import { slugify } from "./lib/slug"
 import { remoteGet } from "./remote-get"
@@ -111,7 +112,7 @@ export async function uploadImages(
   })
 
   return {
-    urls: result.map((file) => file.url),
+    urls: result.map((file) => stripCdnUrl(file.url)),
     keys: result.map((file) => file.id),
   }
 }

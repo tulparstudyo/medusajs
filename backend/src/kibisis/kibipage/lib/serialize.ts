@@ -1,3 +1,4 @@
+import { transformSectionSettingsCdn } from "../../cdn/url"
 import { PageKey, SectionDTO, SectionSettings } from "../types"
 
 type SectionRecord = {
@@ -24,7 +25,7 @@ export function readSettings(value: unknown): SectionSettings {
   }
 
   if (typeof value === "object" && !Array.isArray(value)) {
-    return value as SectionSettings
+    return transformSectionSettingsCdn(value as SectionSettings, "resolve")
   }
 
   return {}

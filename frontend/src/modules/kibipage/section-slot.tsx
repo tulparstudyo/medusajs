@@ -1,18 +1,19 @@
-import { renderFastLinks } from "../sections/fast-links/render"
-import FastLinksView from "../sections/fast-links/view"
-import { renderIconBox } from "../sections/icon-box/render"
-import IconBoxView from "../sections/icon-box/view"
-import { renderHtmlContent } from "../sections/html-content/render"
-import HtmlContentView from "../sections/html-content/view"
-import { renderHeroShowcase } from "../sections/hero-showcase/render"
-import HeroShowcaseView from "../sections/hero-showcase/view"
-import { renderQuickCategories } from "../sections/quick-categories/render"
-import QuickCategoriesView from "../sections/quick-categories/view"
-import { renderPromoBanner } from "../sections/promo-banner/render"
-import PromoBannerView from "../sections/promo-banner/view"
-import SelectedProductSection from "../sections/selected-product"
-import type { StorePageSection } from "@lib/data/pages"
-import { getKibiI18n } from "../i18n/server"
+import { getKibiI18n } from "@theme/kibisis/i18n/server"
+
+import type { StorePageSection } from "./pages"
+import { renderFastLinks } from "./sections/fast-links/render"
+import FastLinksView from "./sections/fast-links/view"
+import { renderHeroShowcase } from "./sections/hero-showcase/render"
+import HeroShowcaseView from "./sections/hero-showcase/view"
+import { renderHtmlContent } from "./sections/html-content/render"
+import HtmlContentView from "./sections/html-content/view"
+import { renderIconBox } from "./sections/icon-box/render"
+import IconBoxView from "./sections/icon-box/view"
+import { renderPromoBanner } from "./sections/promo-banner/render"
+import PromoBannerView from "./sections/promo-banner/view"
+import { renderQuickCategories } from "./sections/quick-categories/render"
+import QuickCategoriesView from "./sections/quick-categories/view"
+import SelectedProductSection from "./sections/selected-product"
 
 export default async function SectionSlot({
   section,
@@ -80,3 +81,4 @@ export default async function SectionSlot({
       return null
   }
 }
+

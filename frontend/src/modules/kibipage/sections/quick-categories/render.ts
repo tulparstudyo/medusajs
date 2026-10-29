@@ -3,7 +3,7 @@ import "server-only"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 
-import { themeIconHtml } from "../../icon-html"
+import { themeIconHtml } from "@theme/kibisis/icon-html"
 
 const TONES = new Set([
   "rose",
@@ -80,7 +80,7 @@ export function renderQuickCategories(instanceId: string, settings: unknown) {
   const template = readFileSync(
     path.join(
       process.cwd(),
-      "src/theme/kibisis/sections/quick-categories/index.html"
+      "src/modules/kibipage/sections/quick-categories/index.html"
     ),
     "utf8"
   )

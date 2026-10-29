@@ -2,15 +2,18 @@ import { MedusaError } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
 import { KIBIPAGE_MODULE } from ".."
+import { transformSectionSettingsCdn } from "../../cdn/url"
 import { defaultSettings, normalizeSettings } from "../lib/settings"
-import KibipageModuleService from "../service"
+import KibipageModuleService, { PageRow } from "../service"
 import {
+  CreatePageInput,
   CreateSectionInput,
   isSectionType,
   ReorderSectionsInput,
   SECTION_LABELS,
   SectionDTO,
   SectionType,
+  UpdatePageInput,
   UpdateSectionInput,
 } from "../types"
 
@@ -24,6 +27,62 @@ function sectionTypeOf(type: string): SectionType {
 
   return type
 }
+
+export const createPageStep = createStep(
+  "create-page",
+  async (input: CreatePageInput, { container }) => {
+    const page = await serviceOf(container).createPage(input)
+    return new StepResponse(page, page.id)
+  },
+  async (id: string | undefined, { container }) => {
+    if (!id) {
+      return
+    }
+
+    await serviceOf(container).deletePageRecords(id)
+  }
+)
+
+export const updatePageStep = createStep(
+  "update-page",
+  async (input: { id: string; data: UpdatePageInput }, { container }) => {
+    const { previous, page } = await serviceOf(container).updatePage(input.id, input.data)
+    return new StepResponse(page, previous)
+  },
+  async (previous: PageRow | undefined, { container }) => {
+    if (!previous) {
+      return
+    }
+
+    await serviceOf(container).updatePageRecords({
+      id: previous.id,
+      page_key: previous.page_key,
+      label: previous.label ?? "",
+    })
+  }
+)
+
+export const deletePageStep = createStep(
+  "delete-page",
+  async (id: string, { container }) => {
+    const deleted = await serviceOf(container).deletePage(id)
+    return new StepResponse({ id: deleted.page.id }, deleted)
+  },
+  async (
+    deleted: { page: PageRow; sectionIds: string[] } | undefined,
+    { container }
+  ) => {
+    if (!deleted) {
+      return
+    }
+
+    const service = serviceOf(container)
+    await service.restorePageRecords([deleted.page.id])
+    if (deleted.sectionIds.length > 0) {
+      await service.restorePageSections(deleted.sectionIds)
+    }
+  }
+)
 
 export const createSectionStep = createStep(
   "create-section",
@@ -77,7 +136,7 @@ export const updateSectionStep = createStep(
       id: previous.id,
       name: previous.name,
       is_active: previous.is_active,
-      settings: previous.settings,
+      settings: transformSectionSettingsCdn(previous.settings, "strip"),
     })
   }
 )

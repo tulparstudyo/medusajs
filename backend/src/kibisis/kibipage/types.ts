@@ -1,8 +1,24 @@
-export const KIBI_PAGE_KEYS = ["home", "product","cookiepolicy","privacy","terms","contact","about","faq","careers"] as const
+export const SYSTEM_PAGE_KEYS = ["home", "product"] as const
 
-export type PageKey = (typeof KIBI_PAGE_KEYS)[number]
+export type SystemPageKey = (typeof SYSTEM_PAGE_KEYS)[number]
 
-export const KIBI_PAGE_LABELS: Record<PageKey, string> = {
+export const KIBI_PAGE_KEYS = [
+  "home",
+  "product",
+  "cookiepolicy",
+  "privacy",
+  "terms",
+  "contact",
+  "about",
+  "faq",
+  "careers",
+] as const
+
+export type DefaultPageKey = (typeof KIBI_PAGE_KEYS)[number]
+
+export type PageKey = string
+
+export const KIBI_PAGE_LABELS: Record<DefaultPageKey, string> = {
   home: "Ana Sayfa",
   product: "Ürün Detay",
   cookiepolicy: "Çerez Politikası",
@@ -12,7 +28,45 @@ export const KIBI_PAGE_LABELS: Record<PageKey, string> = {
   about: "Hakkımızda",
   faq: "S.S.S.",
   careers: "İş İlanları",
+}
 
+export function isSystemPageKey(value: string): value is SystemPageKey {
+  return (SYSTEM_PAGE_KEYS as readonly string[]).includes(value)
+}
+
+export function isDefaultPageKey(value: string): value is DefaultPageKey {
+  return (KIBI_PAGE_KEYS as readonly string[]).includes(value)
+}
+
+export function defaultPageLabel(key: string): string {
+  return isDefaultPageKey(key) ? KIBI_PAGE_LABELS[key] : key
+}
+
+export const PAGE_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+const TURKISH_CHAR_MAP: Record<string, string> = {
+  ç: "c",
+  Ç: "c",
+  ğ: "g",
+  Ğ: "g",
+  ı: "i",
+  I: "i",
+  İ: "i",
+  ö: "o",
+  Ö: "o",
+  ş: "s",
+  Ş: "s",
+  ü: "u",
+  Ü: "u",
+}
+
+export function slugifyPageKey(value: string): string {
+  return value
+    .replace(/[çÇğĞıIİöÖşŞüÜ]/g, (char) => TURKISH_CHAR_MAP[char] ?? char)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
 }
 
 export const PRODUCT_PLACEMENTS = ["buy", "aside", "below"] as const
@@ -378,6 +432,7 @@ export type PageDTO = {
   id: string
   key: PageKey
   label: string
+  is_system: boolean
   section_count: number
 }
 
@@ -397,6 +452,22 @@ export type PublicSectionDTO = {
   type: string
   position: number
   settings: SectionSettings
+}
+
+export type PublicPageDTO = {
+  page_key: PageKey
+  label: string
+  sections: PublicSectionDTO[]
+}
+
+export type CreatePageInput = {
+  page_key: PageKey
+  label: string
+}
+
+export type UpdatePageInput = {
+  page_key: PageKey
+  label: string
 }
 
 export type CreateSectionInput = {
@@ -424,7 +495,8 @@ export type ReorderSectionsInput = {
 }
 
 export function isPageKey(value: string): value is PageKey {
-  return (KIBI_PAGE_KEYS as readonly string[]).includes(value)
+  const trimmed = value.trim()
+  return trimmed.length >= 1 && trimmed.length <= 80 && PAGE_KEY_PATTERN.test(trimmed)
 }
 
 export function isSectionType(value: string): value is SectionType {

@@ -28,11 +28,15 @@ const anchor = z
   .string()
   .trim()
   .min(1, "Sayfa içi bağlantı gerekli.")
-  .max(120)
+  .max(500)
   .refine((value) => {
+    if (value.startsWith("/")) {
+      return !value.startsWith("//") && !/\s/.test(value)
+    }
+
     const withHash = value.startsWith("#") ? value : `#${value}`
     return /^#[A-Za-z0-9][A-Za-z0-9_-]*$/.test(withHash)
-  }, "Sayfa içi bağlantı # ile başlamalı ve harf, rakam, - veya _ içermelidir. Örnek: #hedef")
+  }, "Sayfa içi bağlantı / veya # ile başlamalıdır. Örnek: /static/hakkimizda veya #hedef")
 
 const flags = {
   align: z.enum(NAV_ALIGNS).optional(),

@@ -273,11 +273,11 @@ export default function NavForm({
                   onChange={(event) =>
                     setValues((current) => ({ ...current, anchor: event.target.value }))
                   }
-                  placeholder="#hedef"
+                  placeholder="/static/hakkimizda veya #hedef"
                   required
                 />
                 <Text size="small" className="text-ui-fg-subtle">
-                  Vitrinde href=&quot;#hedef&quot; olarak kullanılır.
+                  Vitrinde &quot;/...&quot; veya &quot;#hedef&quot; olarak kullanılır.
                 </Text>
               </div>
             )}

@@ -4,14 +4,17 @@ import {
   validateAndTransformBody,
 } from "@medusajs/framework/http"
 
+import { cdnUrlMiddleware } from "../kibisis/cdn/url"
 import {
   CreateNavItemSchema,
   ReorderNavSchema,
   UpdateNavItemSchema,
 } from "../kibisis/kibinav/validators"
 import {
+  CreatePageSchema,
   CreateSectionSchema,
   ReorderSectionsSchema,
+  UpdatePageSchema,
   UpdateSectionSchema,
   UploadSectionFileSchema,
 } from "../kibisis/kibipage/validators"
@@ -33,8 +36,16 @@ import {
 export default defineMiddlewares({
   routes: [
     {
-      method: ['POST'],
-      matcher: '/store/search',
+      matcher: "/admin",
+      middlewares: [cdnUrlMiddleware],
+    },
+    {
+      matcher: "/store",
+      middlewares: [cdnUrlMiddleware],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/search",
       middlewares: [
         configureStoreSearch({
           allowed_indexes: {
@@ -57,6 +68,16 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/kibinav/reorder",
       middlewares: [validateAndTransformBody(ReorderNavSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibipage/pages",
+      middlewares: [validateAndTransformBody(CreatePageSchema)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/kibipage/pages/:key",
+      middlewares: [validateAndTransformBody(UpdatePageSchema)],
     },
     {
       method: ["POST"],
