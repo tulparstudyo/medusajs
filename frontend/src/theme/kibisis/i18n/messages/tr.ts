@@ -83,6 +83,7 @@ export const tr: Messages = {
   "toast.cannot_add": "Bu ürün oturum sepetine eklenemiyor",
   "toast.no_country": "Ülke oturumu bulunamadı",
   "toast.add_failed": "Sepete eklenemedi",
+  "toast.insufficient_stock": "Stok yetersiz! Bu üründen daha fazla eklenemez.",
   "toast.removed": "Ürün sepetten kaldırıldı",
   "toast.remove_failed": "Ürün kaldırılamadı",
   "toast.quantity_failed": "Adet güncellenemedi",

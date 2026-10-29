@@ -32,6 +32,11 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
       lineId: item.id,
       quantity,
     })
+      .then((res) => {
+        if (!res.ok) {
+          setError(res.message || "Error updating item")
+        }
+      })
       .catch((err) => {
         setError(err.message)
       })

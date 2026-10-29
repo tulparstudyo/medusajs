@@ -81,6 +81,7 @@ export const en = {
   "toast.cannot_add": "This product cannot be added to the cart",
   "toast.no_country": "Country session not found",
   "toast.add_failed": "Could not add to cart",
+  "toast.insufficient_stock": "Insufficient stock! Cannot add more of this item.",
   "toast.removed": "Removed from cart",
   "toast.remove_failed": "Could not remove item",
   "toast.quantity_failed": "Could not update quantity",

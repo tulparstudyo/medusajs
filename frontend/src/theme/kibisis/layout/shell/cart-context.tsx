@@ -193,7 +193,6 @@ export function KibisisCartProvider({
           },
         ]
       })
-      showToast(t("toast.added_named", { name: item.name.substring(0, 24) }))
       setPending(true)
 
       void addToCart({
@@ -201,15 +200,23 @@ export function KibisisCartProvider({
         quantity: 1,
         countryCode,
       })
-        .then(() => {
+        .then((result) => {
+          if (!result.ok) {
+            setItems(snapshot)
+            showToast(
+              result.code === "insufficient_inventory"
+                ? t("toast.insufficient_stock")
+                : t("toast.add_failed"),
+              "x-mark"
+            )
+            return
+          }
+          showToast(t("toast.added_named", { name: item.name.substring(0, 24) }))
           refresh()
         })
-        .catch((error: unknown) => {
+        .catch(() => {
           setItems(snapshot)
-          showToast(
-            error instanceof Error ? error.message : t("toast.add_failed"),
-            "x-mark"
-          )
+          showToast(t("toast.add_failed"), "x-mark")
         })
         .finally(() => {
           setPending(false)
@@ -230,16 +237,18 @@ export function KibisisCartProvider({
       setPending(true)
 
       void deleteLineItem(id)
-        .then(() => {
+        .then((result) => {
+          if (!result.ok) {
+            setItems(snapshot)
+            showToast(t("toast.remove_failed"), "x-mark")
+            return
+          }
           showToast(t("toast.removed"), "trash")
           refresh()
         })
-        .catch((error: unknown) => {
+        .catch(() => {
           setItems(snapshot)
-          showToast(
-            error instanceof Error ? error.message : t("toast.remove_failed"),
-            "x-mark"
-          )
+          showToast(t("toast.remove_failed"), "x-mark")
         })
         .finally(() => {
           setPending(false)
@@ -262,15 +271,22 @@ export function KibisisCartProvider({
       setPending(true)
 
       void updateLineItem({ lineId: id, quantity })
-        .then(() => {
+        .then((result) => {
+          if (!result.ok) {
+            setItems(snapshot)
+            showToast(
+              result.code === "insufficient_inventory"
+                ? t("toast.insufficient_stock")
+                : t("toast.quantity_failed"),
+              "x-mark"
+            )
+            return
+          }
           refresh()
         })
-        .catch((error: unknown) => {
+        .catch(() => {
           setItems(snapshot)
-          showToast(
-            error instanceof Error ? error.message : t("toast.quantity_failed"),
-            "x-mark"
-          )
+          showToast(t("toast.quantity_failed"), "x-mark")
         })
         .finally(() => {
           setPending(false)
@@ -289,16 +305,18 @@ export function KibisisCartProvider({
     setPending(true)
 
     void Promise.all(snapshot.map((item) => deleteLineItem(item.id)))
-      .then(() => {
+      .then((results) => {
+        if (results.some((res) => !res.ok)) {
+          setItems(snapshot)
+          showToast(t("toast.clear_failed"), "x-mark")
+          return
+        }
         showToast(t("toast.cleared"), "trash")
         refresh()
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         setItems(snapshot)
-        showToast(
-          error instanceof Error ? error.message : t("toast.clear_failed"),
-          "x-mark"
-        )
+        showToast(t("toast.clear_failed"), "x-mark")
       })
       .finally(() => {
         setPending(false)
