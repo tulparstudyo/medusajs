@@ -37,6 +37,17 @@ import {
 export default defineMiddlewares({
   routes: [
     {
+      matcher: "/store/kibipayment/callback",
+      middlewares: [
+        (req, _res, next) => {
+          if (!req.headers["x-publishable-api-key"] && process.env.MEDUSA_PUBLISHABLE_KEY) {
+            req.headers["x-publishable-api-key"] = process.env.MEDUSA_PUBLISHABLE_KEY
+          }
+          next()
+        },
+      ],
+    },
+    {
       matcher: "/admin",
       middlewares: [cdnUrlMiddleware],
     },

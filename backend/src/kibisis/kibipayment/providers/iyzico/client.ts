@@ -24,12 +24,12 @@ export class IyzicoClient implements PaymentClient {
   }
 
   async initializeSession(payload: PaymentDocument): Promise<PaymentDocument> {
-    const path = "/payment/iyzipay/checkoutform/initialize/auth/ecom"
+    const path = "/payment/iyzipos/checkoutform/initialize/auth/ecom"
     return this.request(path, payload)
   }
 
   async verifyCallback(payload: PaymentDocument): Promise<PaymentDocument> {
-    const path = "/payment/iyzipay/checkoutform/auth/ecom/detail"
+    const path = "/payment/iyzipos/checkoutform/auth/ecom/detail"
     return this.request(path, payload)
   }
 
@@ -40,7 +40,8 @@ export class IyzicoClient implements PaymentClient {
 
     const payloadToSign = `${randomKey}${uri}${bodyStr}`
     const signature = createHmac("sha256", this.secretKey).update(payloadToSign).digest("hex")
-    const authHeader = `IYZWSv2 apiKey:${this.apiKey}&randomKey:${randomKey}&signature:${signature}`
+    const authString = `apiKey:${this.apiKey}&randomKey:${randomKey}&signature:${signature}`
+    const authHeader = `IYZWSv2 ${Buffer.from(authString, "utf8").toString("base64")}`
 
     let response: Response
     try {

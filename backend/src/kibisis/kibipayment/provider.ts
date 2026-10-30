@@ -111,7 +111,7 @@ export class KibipaymentProviderService extends AbstractPaymentProvider<Kibipaym
       amount,
       currency,
       locale: "tr",
-      callbackUrl: `${shopUrl()}/store/kibipayment/callback?provider=${encodeURIComponent(providerId)}&reference=${encodeURIComponent(reference)}`,
+      callbackUrl: `${shopUrl()}/kibipayment/callback?provider=${encodeURIComponent(providerId)}&reference=${encodeURIComponent(reference)}&cart_id=${encodeURIComponent(cartId)}`,
       buyer,
       billingAddress: buyer,
       shippingAddress: buyer,

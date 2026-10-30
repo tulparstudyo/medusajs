@@ -12,20 +12,25 @@ import ErrorMessage from "../error-message"
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
   "data-testid": string
+  disabled?: boolean
 }
 
 const PaymentButton: React.FC<PaymentButtonProps> = ({
   cart,
   "data-testid": dataTestId,
+  disabled: externalDisabled = false,
 }) => {
   const notReady =
+    externalDisabled ||
     !cart ||
     !cart.shipping_address ||
     !cart.billing_address ||
     !cart.email ||
     (cart.shipping_methods?.length ?? 0) < 1
 
-  const paymentSession = cart.payment_collection?.payment_sessions?.[0]
+  const paymentSession =
+    cart.payment_collection?.payment_sessions?.find((s) => s.status === "pending") ??
+    cart.payment_collection?.payment_sessions?.[0]
 
   switch (true) {
     case isKibipayment(paymentSession?.provider_id):
@@ -64,9 +69,13 @@ const KibipaymentButton = ({
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const session = cart.payment_collection?.payment_sessions?.find(
-    (s) => isKibipayment(s.provider_id)
-  )
+  const session =
+    cart.payment_collection?.payment_sessions?.find(
+      (s) => isKibipayment(s.provider_id) && s.status === "pending"
+    ) ??
+    cart.payment_collection?.payment_sessions?.find(
+      (s) => isKibipayment(s.provider_id)
+    )
   const presentation = (session?.data as Record<string, unknown>)?.presentation as
     | Record<string, unknown>
     | undefined

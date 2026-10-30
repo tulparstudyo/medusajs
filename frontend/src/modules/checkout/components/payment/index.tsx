@@ -86,9 +86,20 @@ const Payment = ({
         activeSession?.provider_id === selectedPaymentMethod
 
       if (!checkActiveSession) {
-        await initiatePaymentSession(cart, {
+        const res = await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
+          data: {
+            cart_id: cart.id,
+            email: cart.email,
+            billing_address: cart.billing_address,
+          },
         })
+        if (res && "ok" in res && !res.ok) {
+          setError(res.message || "Ödeme oturumu başlatılamadı.")
+          setIsLoading(false)
+          return
+        }
+        router.refresh()
       }
 
       if (!shouldInputPaymentDetails) {
