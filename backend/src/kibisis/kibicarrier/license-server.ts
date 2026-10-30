@@ -161,12 +161,20 @@ export async function callLicenseServer(
 
 export async function licenseServerMessage(response: Response): Promise<string> {
   try {
-    const body = (await response.json()) as { message?: string }
-    if (body?.message) {
-      return body.message
+    const text = await response.text()
+    try {
+      const body = JSON.parse(text) as { message?: string }
+      if (body?.message) {
+        return body.message
+      }
+    } catch {
+      const stripped = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+      if (stripped) {
+        return stripped.slice(0, 150)
+      }
     }
   } catch {
-    // The body was not JSON; fall back to the status code.
+    // The body was not readable; fall back to the status code.
   }
 
   return `Lisans sunucusu HTTP ${response.status} döndü.`

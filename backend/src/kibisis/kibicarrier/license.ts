@@ -36,13 +36,25 @@ async function verify(repo: string): Promise<CarrierLicenseDTO> {
     const response = await callLicenseServer("verify.php", repo, "verify", TIMEOUT_MS)
 
     if (response.ok) {
-      const body = (await response.json()) as {
+      const text = await response.text()
+      let body: {
         valid?: boolean
         customer?: string | null
         expires_at?: string | null
         ref?: string | null
+        message?: string
       }
-      result = body?.valid ? status(true, null, body) : status(false, "Lisans sunucusu lisansı onaylamadı.")
+      try {
+        body = JSON.parse(text)
+      } catch {
+        const snippet = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 150)
+        throw new MedusaError(
+          MedusaError.Types.UNEXPECTED_STATE,
+          snippet ? `Lisans sunucusu geçersiz yanıt döndü: ${snippet}` : "Lisans sunucusu geçersiz yanıt döndü."
+        )
+      }
+
+      result = body?.valid ? status(true, null, body) : status(false, body?.message || "Lisans sunucusu lisansı onaylamadı.")
     } else if (response.status >= 500) {
       throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, await licenseServerMessage(response))
     } else {
