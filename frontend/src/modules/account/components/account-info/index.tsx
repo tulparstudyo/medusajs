@@ -32,7 +32,7 @@ const AccountInfo = ({
 
   const handleToggle = () => {
     clearState()
-    setTimeout(() => toggle(), 100)
+    toggle()
   }
 
   useEffect(() => {
@@ -73,11 +73,10 @@ const AccountInfo = ({
         <Disclosure.Panel
           static
           className={clx(
-            "transition-[max-height,opacity] duration-300 ease-in-out overflow-hidden",
-            {
-              "max-h-[1000px] opacity-100": isSuccess,
-              "max-h-0 opacity-0": !isSuccess,
-            }
+            "transition-[max-height,opacity] duration-300 ease-in-out",
+            isSuccess
+              ? "max-h-[1000px] opacity-100 overflow-visible"
+              : "max-h-0 opacity-0 overflow-hidden pointer-events-none"
           )}
           data-testid="success-message"
         >
@@ -92,11 +91,10 @@ const AccountInfo = ({
         <Disclosure.Panel
           static
           className={clx(
-            "transition-[max-height,opacity] duration-300 ease-in-out overflow-hidden",
-            {
-              "max-h-[1000px] opacity-100": isError,
-              "max-h-0 opacity-0": !isError,
-            }
+            "transition-[max-height,opacity] duration-300 ease-in-out",
+            isError
+              ? "max-h-[1000px] opacity-100 overflow-visible"
+              : "max-h-0 opacity-0 overflow-hidden pointer-events-none"
           )}
           data-testid="error-message"
         >
@@ -110,11 +108,10 @@ const AccountInfo = ({
         <Disclosure.Panel
           static
           className={clx(
-            "transition-[max-height,opacity] duration-300 ease-in-out overflow-visible",
-            {
-              "max-h-[1000px] opacity-100": state,
-              "max-h-0 opacity-0": !state,
-            }
+            "transition-[max-height,opacity] duration-300 ease-in-out",
+            state
+              ? "max-h-[1000px] opacity-100 overflow-visible"
+              : "max-h-0 opacity-0 overflow-hidden pointer-events-none"
           )}
         >
           <div className="flex flex-col gap-y-2 py-4">

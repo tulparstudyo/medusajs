@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useCallback, useState } from "react"
 
 export type StateType = [boolean, () => void, () => void, () => void] & {
   state: boolean
@@ -23,17 +23,17 @@ export type StateType = [boolean, () => void, () => void, () => void] & {
 const useToggleState = (initialState = false) => {
   const [state, setState] = useState<boolean>(initialState)
 
-  const close = () => {
+  const close = useCallback(() => {
     setState(false)
-  }
+  }, [])
 
-  const open = () => {
+  const open = useCallback(() => {
     setState(true)
-  }
+  }, [])
 
-  const toggle = () => {
+  const toggle = useCallback(() => {
     setState((state) => !state)
-  }
+  }, [])
 
   const hookData = [state, open, close, toggle] as StateType
   hookData.state = state
