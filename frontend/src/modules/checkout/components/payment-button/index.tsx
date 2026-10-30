@@ -1,12 +1,12 @@
 "use client"
 
 import { isKibipayment, isManual, isStripeLike } from "@lib/constants"
-import { placeOrder } from "@lib/data/cart"
+import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import { useParams } from "next/navigation"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import ErrorMessage from "../error-message"
 
 type PaymentButtonProps = {
@@ -69,6 +69,16 @@ const KibipaymentButton = ({
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Tarayıcı geri düğmesiyle iyzico ödeme sayfasından geri dönüldüğünde (BFCache)
+  // düğmenin loading veya takılı kalmasını önlemek için submitting durumunu sıfırla
+  useEffect(() => {
+    const handlePageShow = () => {
+      setSubmitting(false)
+    }
+    window.addEventListener("pageshow", handlePageShow)
+    return () => window.removeEventListener("pageshow", handlePageShow)
+  }, [])
   const session =
     cart.payment_collection?.payment_sessions?.find(
       (s) => isKibipayment(s.provider_id) && s.status === "pending"
@@ -90,20 +100,50 @@ const KibipaymentButton = ({
       })
   }
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setSubmitting(true)
+    setErrorMessage(null)
 
-    if (presentation?.redirectUrl) {
-      window.location.href = String(presentation.redirectUrl)
-      return
+    const providerId = session?.provider_id || "kibipayment"
+
+    try {
+      // Ödeme sayfasına gitmeden hemen önce seans ve token'ı her tıklamada taze olarak başlatıyoruz.
+      // Böylece kullanıcı sipariş özetinde uzun süre beklese veya sayfayı yenilese bile
+      // iyzico token'ının süresi dolmaz ve "Geçersiz token" hatası oluşmaz.
+      const res = await initiatePaymentSession(cart, {
+        provider_id: providerId,
+        data: {
+          cart_id: cart.id,
+          email: cart.email,
+          billing_address: cart.billing_address,
+        },
+      })
+
+      if (!res.ok) {
+        setErrorMessage(res.message || "Ödeme oturumu başlatılamadı.")
+        setSubmitting(false)
+        return
+      }
+
+      const redirectUrl = res.redirectUrl || presentation?.redirectUrl
+      if (redirectUrl) {
+        window.location.href = String(redirectUrl)
+        return
+      }
+
+      const paymentPageUrl = res.paymentPageUrl || presentation?.paymentPageUrl
+      if (paymentPageUrl) {
+        window.location.href = String(paymentPageUrl)
+        return
+      }
+
+      await onPaymentCompleted()
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Ödeme başlatılırken bir hata oluştu."
+      )
+      setSubmitting(false)
     }
-
-    if (presentation?.paymentPageUrl) {
-      window.location.href = String(presentation.paymentPageUrl)
-      return
-    }
-
-    onPaymentCompleted()
   }
 
   return (
@@ -115,7 +155,7 @@ const KibipaymentButton = ({
         size="large"
         data-testid={dataTestId}
       >
-        {presentation?.redirectUrl || presentation?.paymentPageUrl
+        {isKibipayment(session?.provider_id) || presentation?.redirectUrl || presentation?.paymentPageUrl
           ? "Güvenli Ödeme Sayfasına Git"
           : "Siparişi Tamamla"}
       </Button>

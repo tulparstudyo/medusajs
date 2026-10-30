@@ -16,7 +16,7 @@ import {
   clx,
 } from "@modules/common/components/ui"
 import { HttpTypes } from "@medusajs/types"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
 const Payment = ({
@@ -30,21 +30,35 @@ const Payment = ({
     (paymentSession) => paymentSession.status === "pending"
   )
 
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const { countryCode } = useParams()
+  const isTr = countryCode === "tr" || !countryCode
+
+  const isOpen = searchParams.get("step") === "payment"
+  const urlError = searchParams.get("error")
+
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    urlError ? decodeURIComponent(urlError) : null
+  )
   const [paymentComplete, setPaymentComplete] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
 
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
-
-  const isOpen = searchParams.get("step") === "payment"
+  const clearError = () => {
+    setError(null)
+    if (searchParams.get("error")) {
+      const params = new URLSearchParams(searchParams)
+      params.delete("error")
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
+  }
 
   const setPaymentMethod = async (method: string) => {
-    setError(null)
+    clearError()
     setSelectedPaymentMethod(method)
     if (isStripeLike(method)) {
       await initiatePaymentSession(cart, {
@@ -78,6 +92,7 @@ const Payment = ({
 
   const handleSubmit = async () => {
     setIsLoading(true)
+    clearError()
     try {
       const shouldInputPaymentDetails =
         isStripeLike(selectedPaymentMethod) && !activeSession
@@ -118,8 +133,12 @@ const Payment = ({
   }
 
   useEffect(() => {
-    setError(null)
-  }, [isOpen])
+    if (urlError) {
+      setError(decodeURIComponent(urlError))
+    } else {
+      setError(null)
+    }
+  }, [isOpen, urlError])
 
   return (
     <div className="bg-white">
@@ -134,7 +153,7 @@ const Payment = ({
             }
           )}
         >
-          Payment
+          {isTr ? "Ödeme" : "Payment"}
           {!isOpen && paymentReady && <CheckCircleSolid />}
         </Heading>
         {!isOpen && paymentReady && (
@@ -144,13 +163,34 @@ const Payment = ({
               className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
               data-testid="edit-payment-button"
             >
-              Edit
+              {isTr ? "Düzenle" : "Edit"}
             </button>
           </Text>
         )}
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
+          {error && (
+            <div
+              className="mb-6 p-4 rounded-lg border border-rose-200 bg-rose-50 text-rose-800 flex items-start gap-3"
+              data-testid="payment-error-banner"
+            >
+              <svg
+                className="w-5 h-5 text-rose-500 shrink-0 mt-0.5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div className="flex-1 text-sm font-medium leading-relaxed">
+                {error}
+              </div>
+            </div>
+          )}
           {!paidByGiftcard && availablePaymentMethods?.length && (
             <>
               <RadioGroup
@@ -211,8 +251,8 @@ const Payment = ({
             data-testid="submit-payment-button"
           >
             {!activeSession && isStripeLike(selectedPaymentMethod)
-              ? "Enter payment details"
-              : "Continue to review"}
+              ? (isTr ? "Kart Bilgilerini Gir" : "Enter payment details")
+              : (isTr ? "Sipariş Özetine İlerle" : "Continue to review")}
           </Button>
         </div>
 

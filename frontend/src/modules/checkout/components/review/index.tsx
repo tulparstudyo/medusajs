@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text, clx } from "@modules/common/components/ui"
@@ -16,6 +16,56 @@ const Review = ({ cart }: { cart: HttpTypes.StoreCart }) => {
   const isOpen = searchParams.get("step") === "review"
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [activeModal, setActiveModal] = useState<"preInfo" | "distanceSales" | null>(null)
+  const checkboxRef = useRef<HTMLInputElement>(null)
+
+  const storageKey = cart?.id ? `terms_accepted_${cart.id}` : null
+
+  // Browser geri dönüldüğünde (BFCache / history.back) veya sayfa yenilendiğinde
+  // checkbox'ın işaretli gelmesine rağmen düğmenin disabled kalmasını önlemek için
+  // hem sessionStorage hem de DOM input durumunu senkronize ediyoruz.
+  useEffect(() => {
+    const syncTermsState = () => {
+      if (typeof window === "undefined") return
+      const stored = storageKey ? sessionStorage.getItem(storageKey) === "true" : false
+      const domChecked = checkboxRef.current?.checked ?? false
+      if (stored || domChecked) {
+        setTermsAccepted(true)
+        if (checkboxRef.current) {
+          checkboxRef.current.checked = true
+        }
+      }
+    }
+
+    syncTermsState()
+
+    const onPageShow = () => {
+      syncTermsState()
+    }
+    window.addEventListener("pageshow", onPageShow)
+    return () => window.removeEventListener("pageshow", onPageShow)
+  }, [storageKey, isOpen])
+
+  const handleTermsChange = (checked: boolean) => {
+    setTermsAccepted(checked)
+    if (storageKey && typeof window !== "undefined") {
+      if (checked) {
+        sessionStorage.setItem(storageKey, "true")
+      } else {
+        sessionStorage.removeItem(storageKey)
+      }
+    }
+  }
+
+  const handleAcceptFromModal = () => {
+    setTermsAccepted(true)
+    if (storageKey && typeof window !== "undefined") {
+      sessionStorage.setItem(storageKey, "true")
+    }
+    if (checkboxRef.current) {
+      checkboxRef.current.checked = true
+    }
+    setActiveModal(null)
+  }
 
   const paidByGiftcard = !!(
     (cart as unknown as Record<string, unknown>)?.gift_cards &&
@@ -50,9 +100,11 @@ const Review = ({ cart }: { cart: HttpTypes.StoreCart }) => {
           <div className="w-full mb-6 p-4 rounded-lg border border-ui-border-base bg-ui-bg-subtle/50">
             <label className="flex items-start gap-x-3 cursor-pointer select-none">
               <input
+                ref={checkboxRef}
                 type="checkbox"
+                autoComplete="off"
                 checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
+                onChange={(e) => handleTermsChange(e.target.checked)}
                 className="mt-1 h-4 w-4 rounded border-ui-border-base text-ui-fg-base focus:ring-ui-fg-base cursor-pointer"
                 data-testid="terms-agreement-checkbox"
               />
@@ -161,10 +213,7 @@ const Review = ({ cart }: { cart: HttpTypes.StoreCart }) => {
             <Modal.Footer>
               <button
                 type="button"
-                onClick={() => {
-                  setTermsAccepted(true)
-                  setActiveModal(null)
-                }}
+                onClick={handleAcceptFromModal}
                 className="w-full py-2 px-4 rounded bg-ui-bg-base text-ui-fg-base border border-ui-border-base hover:bg-ui-bg-subtle text-sm font-medium transition-colors"
               >
                 {isTr ? "Okudum, Onaylıyorum" : "I Accept"}
@@ -206,10 +255,7 @@ const Review = ({ cart }: { cart: HttpTypes.StoreCart }) => {
             <Modal.Footer>
               <button
                 type="button"
-                onClick={() => {
-                  setTermsAccepted(true)
-                  setActiveModal(null)
-                }}
+                onClick={handleAcceptFromModal}
                 className="w-full py-2 px-4 rounded bg-ui-bg-base text-ui-fg-base border border-ui-border-base hover:bg-ui-bg-subtle text-sm font-medium transition-colors"
               >
                 {isTr ? "Okudum, Onaylıyorum" : "I Accept"}

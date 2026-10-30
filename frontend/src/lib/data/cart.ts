@@ -20,6 +20,8 @@ export type CartActionResult = {
   ok: boolean
   code?: "insufficient_inventory" | "error"
   message?: string
+  paymentPageUrl?: string | null
+  redirectUrl?: string | null
 }
 
 function toCartActionError(error: unknown): CartActionResult {
@@ -307,10 +309,52 @@ export async function initiatePaymentSession(
   }
 
   try {
-    await sdk.store.payment.initiatePaymentSession(cart, data, {}, headers)
+    const resp = (await sdk.store.payment.initiatePaymentSession(
+      cart,
+      data,
+      {},
+      headers
+    )) as {
+      payment_collection?: {
+        payment_sessions?: Array<{
+          provider_id?: string
+          status?: string
+          data?: Record<string, unknown>
+        }>
+      }
+    }
+
     const cartCacheTag = await getCacheTag("carts")
-    revalidateTag(cartCacheTag, { expire: 0 })
-    return { ok: true }
+    if (cartCacheTag) {
+      revalidateTag(cartCacheTag, { expire: 0 })
+    }
+
+    const sessions = resp?.payment_collection?.payment_sessions ?? []
+    const session =
+      sessions.find(
+        (s) => s.provider_id === data.provider_id && s.status === "pending"
+      ) ??
+      sessions.find((s) => s.provider_id === data.provider_id) ??
+      sessions[0]
+
+    const presentation = (session?.data as Record<string, unknown>)
+      ?.presentation as Record<string, unknown> | undefined
+
+    const paymentPageUrl =
+      typeof presentation?.paymentPageUrl === "string"
+        ? presentation.paymentPageUrl
+        : null
+
+    const redirectUrl =
+      typeof presentation?.redirectUrl === "string"
+        ? presentation.redirectUrl
+        : null
+
+    return {
+      ok: true,
+      paymentPageUrl,
+      redirectUrl,
+    }
   } catch (error) {
     return toCartActionError(error)
   }
