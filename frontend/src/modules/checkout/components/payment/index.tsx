@@ -107,6 +107,7 @@ const Payment = ({
             cart_id: cart.id,
             email: cart.email,
             billing_address: cart.billing_address,
+            storefront_url: typeof window !== "undefined" ? window.location.origin : undefined,
           },
         })
         if (res && "ok" in res && !res.ok) {

@@ -116,6 +116,7 @@ const KibipaymentButton = ({
           cart_id: cart.id,
           email: cart.email,
           billing_address: cart.billing_address,
+          storefront_url: typeof window !== "undefined" ? window.location.origin : undefined,
         },
       })
 

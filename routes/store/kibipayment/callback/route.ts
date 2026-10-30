@@ -3,12 +3,36 @@ import { completeCartWorkflow } from "@medusajs/medusa/core-flows"
 
 import { verifyPaymentCallback } from "../../../../kibisis/kibipayment/gateway"
 
-function getStorefrontUrl(): string {
-  const configured =
-    process.env.STOREFRONT_URL ||
-    process.env.STORE_CORS?.split(",").find((u) => u.startsWith("http://localhost:") || u.startsWith("https://")) ||
-    "http://localhost:8000"
-  return configured.replace(/\/+$/, "")
+function getStorefrontUrl(req: MedusaRequest): string {
+  // 1. Explicit query parameter passed from frontend during payment initiation (e.g. https://store.teknovip.net)
+  const fromQuery = typeof req.query.storefront === "string" ? req.query.storefront.trim() : ""
+  if (fromQuery && (fromQuery.startsWith("https://") || fromQuery.startsWith("http://"))) {
+    return fromQuery.replace(/\/+$/, "")
+  }
+
+  // 2. Configured STOREFRONT_URL from .env (e.g. https://store.teknovip.net)
+  const configured = process.env.STOREFRONT_URL?.trim()
+  if (configured && !configured.includes("localhost") && !configured.includes("127.0.0.1")) {
+    return configured.replace(/\/+$/, "")
+  }
+
+  // 3. STORE_CORS (find public storefront domain, e.g. https://store.teknovip.net)
+  const corsDomain = process.env.STORE_CORS?.split(",")
+    .map((u) => u.trim())
+    .find((u) => u.startsWith("https://") && !u.includes("localhost") && !u.includes("127.0.0.1"))
+  if (corsDomain) {
+    return corsDomain.replace(/\/+$/, "")
+  }
+
+  // 4. Fallback for single-domain deployments where storefront and backend share the same domain
+  const proto = String(req.headers["x-forwarded-proto"] || "https")
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "")
+  if (host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+    return `${proto}://${host}`.replace(/\/+$/, "")
+  }
+
+  // 5. Local development fallback
+  return (configured || "http://localhost:8000").replace(/\/+$/, "")
 }
 
 function isBrowserRequest(req: MedusaRequest): boolean {
@@ -24,7 +48,7 @@ async function handleCallback(req: MedusaRequest, res: MedusaResponse) {
   const token = typeof body.token === "string" ? body.token : (req.query.token as string | undefined)
   const reference = (req.query.reference as string) || (body.conversationId as string) || null
   const cartId = (req.query.cart_id as string) || (body.basketId as string) || null
-  const storefront = getStorefrontUrl()
+  const storefront = getStorefrontUrl(req)
   const isBrowser = isBrowserRequest(req)
 
   try {

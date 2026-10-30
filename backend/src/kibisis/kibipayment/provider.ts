@@ -91,6 +91,8 @@ export class KibipaymentProviderService extends AbstractPaymentProvider<Kibipaym
     const address = bag(data.billing_address)
     const cartId = str(data.cart_id)
     const reference = cartId || `kp_${Date.now()}`
+    const storefrontUrl = str(data.storefront_url)
+    const storefrontParam = storefrontUrl ? `&storefront=${encodeURIComponent(storefrontUrl)}` : ""
 
     const buyer: PaymentParty = {
       id: str(customer.id, reference),
@@ -111,7 +113,7 @@ export class KibipaymentProviderService extends AbstractPaymentProvider<Kibipaym
       amount,
       currency,
       locale: "tr",
-      callbackUrl: `${shopUrl()}/kibipayment/callback?provider=${encodeURIComponent(providerId)}&reference=${encodeURIComponent(reference)}&cart_id=${encodeURIComponent(cartId)}`,
+      callbackUrl: `${shopUrl()}/kibipayment/callback?provider=${encodeURIComponent(providerId)}&reference=${encodeURIComponent(reference)}&cart_id=${encodeURIComponent(cartId)}${storefrontParam}`,
       buyer,
       billingAddress: buyer,
       shippingAddress: buyer,
