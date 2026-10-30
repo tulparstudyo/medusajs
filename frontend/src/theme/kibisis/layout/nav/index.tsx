@@ -4,20 +4,30 @@ import {
   storeInitials,
   storeName,
 } from "@lib/data/site-settings"
+import { retrieveCustomer } from "@lib/data/customer"
+import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 import { getKibiI18n } from "../../i18n/server"
 import MenuLink from "../menu-link"
+import AccountButton from "./account-button"
 import CartTrigger from "./cart-trigger"
 import MobileMenu from "./mobile-menu"
 import { ScrollHeader } from "./scroll-chrome"
 import SearchBox from "./search-box"
 import TopBar from "./top-bar"
 
-export default async function Nav() {
-  const [navigation, contact] = await Promise.all([
+export default async function Nav({
+  customer: customerProp,
+}: {
+  customer?: HttpTypes.StoreCustomer | null
+} = {}) {
+  const [navigation, contact, customer] = await Promise.all([
     getNavigation("main"),
     getContactSettings(),
+    customerProp !== undefined
+      ? Promise.resolve(customerProp)
+      : retrieveCustomer().catch(() => null),
   ])
   const { t } = await getKibiI18n()
   const items = navigation.items
@@ -52,32 +62,7 @@ export default async function Nav() {
             </LocalizedClientLink>
             <SearchBox />
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-              <LocalizedClientLink
-                href="/account"
-                className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors text-xs"
-              >
-                <svg
-                  className="w-4 h-4 text-slate-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  ></path>
-                </svg>
-                <div className="hidden sm:flex flex-col text-left">
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    {t("nav.sign_in")}
-                  </span>
-                  <span className="font-bold text-slate-800 text-[11px]">
-                    {t("nav.or_sign_up")}
-                  </span>
-                </div>
-              </LocalizedClientLink>
+              <AccountButton customer={customer} />
               <CartTrigger />
             </div>
           </div>
