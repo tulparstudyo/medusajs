@@ -47,6 +47,20 @@ const nextConfig = {
         : []),
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/:countryCode/customer-service",
+        destination: "/:countryCode/static/contact",
+        permanent: true,
+      },
+      {
+        source: "/customer-service",
+        destination: "/tr/static/contact",
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig
