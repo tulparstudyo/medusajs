@@ -1,4 +1,6 @@
 import { retrieveOrder } from "@lib/data/orders"
+import { getCacheTag, removeCartId } from "@lib/data/cookies"
+import { revalidateTag } from "next/cache"
 import { theme } from "@theme"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -19,6 +21,22 @@ export default async function OrderConfirmedPage(props: Props) {
 
   if (!order) {
     return notFound()
+  }
+
+  // Ödeme sağlayıcısından dönüldüğünde tamamlanan sepeti temizle ve önbellekleri tazele
+  await removeCartId()
+
+  const orderCacheTag = await getCacheTag("orders")
+  if (orderCacheTag) {
+    revalidateTag(orderCacheTag, { expire: 0 })
+  }
+  const cartCacheTag = await getCacheTag("carts")
+  if (cartCacheTag) {
+    revalidateTag(cartCacheTag, { expire: 0 })
+  }
+  const customerCacheTag = await getCacheTag("customers")
+  if (customerCacheTag) {
+    revalidateTag(customerCacheTag, { expire: 0 })
   }
 
   return <OrderCompletedTemplate order={order} />
