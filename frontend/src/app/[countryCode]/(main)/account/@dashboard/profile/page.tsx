@@ -1,12 +1,13 @@
 import { Metadata } from "next"
 
-import ProfilePhone from "@modules/account//components/profile-phone"
+import ProfilePhone from "@modules/account/components/profile-phone"
 import ProfileBillingAddress from "@modules/account/components/profile-billing-address"
 import ProfileEmail from "@modules/account/components/profile-email"
 import ProfileName from "@modules/account/components/profile-name"
 import { notFound } from "next/navigation"
 import { listRegions } from "@lib/data/regions"
 import { retrieveCustomer } from "@lib/data/customer"
+import { getKibiI18n } from "@theme/kibisis/i18n/server"
 
 export const metadata: Metadata = {
   title: "Profile",
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 }
 
 export default async function Profile() {
+  const { t } = await getKibiI18n()
   const customer = await retrieveCustomer()
   const regions = await listRegions()
 
@@ -24,11 +26,9 @@ export default async function Profile() {
   return (
     <div className="w-full" data-testid="profile-page-wrapper">
       <div className="mb-8 flex flex-col gap-y-4">
-        <h1 className="text-2xl-semi">Profile</h1>
+        <h1 className="text-2xl-semi">{t("account.profile")}</h1>
         <p className="text-base-regular">
-          View and update your profile information, including your name, email,
-          and phone number. You can also update your billing address, or change
-          your password.
+          {t("account.profile_description")}
         </p>
       </div>
       <div className="flex flex-col gap-y-8 w-full">
@@ -38,8 +38,6 @@ export default async function Profile() {
         <Divider />
         <ProfilePhone customer={customer} />
         <Divider />
-        {/* <ProfilePassword customer={customer} />
-        <Divider /> */}
         <ProfileBillingAddress customer={customer} regions={regions} />
       </div>
     </div>

@@ -18,6 +18,8 @@ import KibisisCategoryTemplate from "./kibisis/categories"
 import KibisisHome from "./kibisis/home"
 import KibisisProductTemplate from "./kibisis/products"
 import KibisisStaticPage from "@modules/kibipage"
+import KibisisAccountLayout from "./kibisis/account/account-layout"
+import KibisisLoginTemplate from "./kibisis/account/login-template"
 import KibisisFooter from "./kibisis/layout/footer"
 import KibisisNav from "./kibisis/layout/nav"
 import KibisisShell from "./kibisis/layout/shell"
@@ -53,6 +55,10 @@ const themes = {
   default: defaultTheme,
   kibisis: {
     ...defaultTheme,
+    account: {
+      layout: KibisisAccountLayout,
+      login: KibisisLoginTemplate,
+    },
     cart: KibisisCartTemplate,
     categories: KibisisCategoryTemplate,
     home: KibisisHome,

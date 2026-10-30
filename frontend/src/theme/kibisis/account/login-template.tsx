@@ -1,0 +1,25 @@
+"use client"
+
+import { useState } from "react"
+import Register from "@modules/account/components/register"
+import Login from "@modules/account/components/login"
+
+export enum LOGIN_VIEW {
+  SIGN_IN = "sign-in",
+  REGISTER = "register",
+}
+
+export default function KibisisLoginTemplate() {
+  const [currentView, setCurrentView] = useState<LOGIN_VIEW>(LOGIN_VIEW.SIGN_IN)
+
+  return (
+    <div className="w-full flex justify-center py-2 sm:py-4">
+      {currentView === LOGIN_VIEW.SIGN_IN ? (
+        <Login setCurrentView={setCurrentView} />
+      ) : (
+        <Register setCurrentView={setCurrentView} />
+      )}
+    </div>
+  )
+}
+
