@@ -67,7 +67,9 @@ const Shipping: React.FC<ShippingProps> = ({
   const router = useRouter()
   const pathname = usePathname()
 
-  const isOpen = searchParams.get("step") === "delivery"
+  const hasSingleDelivery = (availableShippingMethods?.length ?? 0) === 1
+  const singleShippingMethod = hasSingleDelivery ? availableShippingMethods![0] : null
+  const isOpen = searchParams.get("step") === "delivery" && !hasSingleDelivery
 
   const _shippingMethods = availableShippingMethods?.filter(
     (sm) => (sm as unknown as { service_zone?: { fulfillment_set?: { type?: string; location?: { address: HttpTypes.StoreCartAddress } } } }).service_zone?.fulfillment_set?.type !== "pickup"
@@ -108,6 +110,48 @@ const Shipping: React.FC<ShippingProps> = ({
       setShowPickupOptions(PICKUP_OPTION_ON)
     }
   }, [availableShippingMethods])
+
+  // Tek delivery metodu varsa otomatik seç ve payment aşamasına geç
+  useEffect(() => {
+    if (!hasSingleDelivery || !singleShippingMethod) return
+
+    const isCurrentSelected = cart.shipping_methods?.some(
+      (sm) => sm.shipping_option_id === singleShippingMethod.id
+    )
+
+    const advanceToPayment = () => {
+      if (searchParams.get("step") === "delivery") {
+        router.push(pathname + "?step=payment", { scroll: false })
+      }
+    }
+
+    if (!isCurrentSelected) {
+      setIsLoading(true)
+      setShippingMethod({
+        cartId: cart.id,
+        shippingMethodId: singleShippingMethod.id,
+      })
+        .then(() => {
+          advanceToPayment()
+        })
+        .catch((err) => {
+          setError(err?.message || "Delivery method could not be set")
+        })
+        .finally(() => {
+          setIsLoading(false)
+        })
+    } else {
+      advanceToPayment()
+    }
+  }, [
+    hasSingleDelivery,
+    singleShippingMethod?.id,
+    cart.id,
+    cart.shipping_methods,
+    searchParams,
+    pathname,
+    router,
+  ])
 
   const handleEdit = () => {
     router.push(pathname + "?step=delivery", { scroll: false })
@@ -160,19 +204,20 @@ const Shipping: React.FC<ShippingProps> = ({
             "flex flex-row text-3xl-regular gap-x-2 items-baseline",
             {
               "opacity-50 pointer-events-none select-none":
-                !isOpen && cart.shipping_methods?.length === 0,
+                !isOpen && cart.shipping_methods?.length === 0 && !hasSingleDelivery,
             }
           )}
         >
           Delivery
-          {!isOpen && (cart.shipping_methods?.length ?? 0) > 0 && (
+          {!isOpen && ((cart.shipping_methods?.length ?? 0) > 0 || hasSingleDelivery) && (
             <CheckCircleSolid />
           )}
         </Heading>
         {!isOpen &&
           cart?.shipping_address &&
           cart?.billing_address &&
-          cart?.email && (
+          cart?.email &&
+          !hasSingleDelivery && (
             <Text>
               <button
                 onClick={handleEdit}
@@ -386,15 +431,18 @@ const Shipping: React.FC<ShippingProps> = ({
       ) : (
         <div>
           <div className="text-small-regular">
-            {cart && (cart.shipping_methods?.length ?? 0) > 0 && (
+            {((cart && (cart.shipping_methods?.length ?? 0) > 0) || hasSingleDelivery) && (
               <div className="flex flex-col w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Method
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
-                  {cart.shipping_methods!.at(-1)!.name}{" "}
+                  {cart.shipping_methods?.at(-1)?.name ?? singleShippingMethod?.name}{" "}
                   {convertToLocale({
-                    amount: cart.shipping_methods!.at(-1)!.amount!,
+                    amount:
+                      cart.shipping_methods?.at(-1)?.amount ??
+                      singleShippingMethod?.amount ??
+                      0,
                     currency_code: cart?.currency_code,
                   })}
                 </Text>

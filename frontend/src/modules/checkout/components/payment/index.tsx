@@ -1,6 +1,6 @@
 "use client"
 import { RadioGroup } from "@headlessui/react"
-import { isKibipayment, isStripeLike, paymentInfoMap } from "@lib/constants"
+import { isStripeLike, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -36,7 +36,9 @@ const Payment = ({
   const { countryCode } = useParams()
   const isTr = countryCode === "tr" || !countryCode
 
-  const isOpen = searchParams.get("step") === "payment"
+  const hasSinglePayment = (availablePaymentMethods?.length ?? 0) === 1
+  const singlePaymentMethodId = hasSinglePayment ? availablePaymentMethods[0].id : null
+  const isOpen = searchParams.get("step") === "payment" && !hasSinglePayment
   const urlError = searchParams.get("error")
 
   const [isLoading, setIsLoading] = useState(false)
@@ -45,7 +47,7 @@ const Payment = ({
   )
   const [paymentComplete, setPaymentComplete] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    activeSession?.provider_id ?? ""
+    activeSession?.provider_id || (hasSinglePayment ? singlePaymentMethodId! : "")
   )
 
   const clearError = () => {
@@ -72,7 +74,9 @@ const Payment = ({
   )
 
   const paymentReady =
-    (activeSession && (cart?.shipping_methods?.length ?? 0) !== 0) || paidByGiftcard
+    (activeSession && (cart?.shipping_methods?.length ?? 0) !== 0) ||
+    paidByGiftcard ||
+    (hasSinglePayment && (cart?.shipping_methods?.length ?? 0) !== 0)
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -83,6 +87,58 @@ const Payment = ({
     },
     [searchParams]
   )
+
+  // Tek ödeme yöntemi varsa otomatik oturum aç ve review aşamasına atla
+  useEffect(() => {
+    if (!hasSinglePayment || !singlePaymentMethodId) return
+
+    const checkActiveSession =
+      activeSession?.provider_id === singlePaymentMethodId
+
+    const advanceToReview = () => {
+      if (searchParams.get("step") === "payment") {
+        router.push(pathname + "?" + createQueryString("step", "review"), {
+          scroll: false,
+        })
+      }
+    }
+
+    if (!checkActiveSession) {
+      initiatePaymentSession(cart, {
+        provider_id: singlePaymentMethodId,
+        data: {
+          cart_id: cart.id,
+          email: cart.email,
+          billing_address: cart.billing_address,
+          storefront_url:
+            typeof window !== "undefined" ? window.location.origin : undefined,
+        },
+      })
+        .then((res) => {
+          if (res && "ok" in res && !res.ok) {
+            setError(res.message || "Ödeme oturumu başlatılamadı.")
+            return
+          }
+          advanceToReview()
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : String(err))
+        })
+    } else {
+      advanceToReview()
+    }
+  }, [
+    hasSinglePayment,
+    singlePaymentMethodId,
+    activeSession?.provider_id,
+    cart.id,
+    cart.email,
+    cart.billing_address,
+    searchParams,
+    pathname,
+    router,
+    createQueryString,
+  ])
 
   const handleEdit = () => {
     router.push(pathname + "?" + createQueryString("step", "payment"), {
@@ -150,14 +206,14 @@ const Payment = ({
             "flex flex-row text-3xl-regular gap-x-2 items-baseline",
             {
               "opacity-50 pointer-events-none select-none":
-                !isOpen && !paymentReady,
+                !isOpen && !paymentReady && !hasSinglePayment,
             }
           )}
         >
           {isTr ? "Ödeme" : "Payment"}
-          {!isOpen && paymentReady && <CheckCircleSolid />}
+          {!isOpen && (paymentReady || hasSinglePayment) && <CheckCircleSolid />}
         </Heading>
-        {!isOpen && paymentReady && (
+        {!isOpen && paymentReady && !hasSinglePayment && (
           <Text>
             <button
               onClick={handleEdit}
@@ -258,34 +314,44 @@ const Payment = ({
         </div>
 
         <div className={isOpen ? "hidden" : "block"}>
-          {cart && paymentReady && activeSession ? (
+          {cart && ((paymentReady && activeSession) || hasSinglePayment) ? (
             <div className="flex items-start gap-x-1 w-full">
               <div className="flex flex-col w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                  Payment method
+                  {isTr ? "Ödeme yöntemi" : "Payment method"}
                 </Text>
                 <Text
                   className="txt-medium text-ui-fg-subtle"
                   data-testid="payment-method-summary"
                 >
-                  {paymentInfoMap[activeSession?.provider_id]?.title ||
-                    activeSession?.provider_id}
+                  {paymentInfoMap[
+                    activeSession?.provider_id || singlePaymentMethodId || ""
+                  ]?.title ||
+                    activeSession?.provider_id ||
+                    singlePaymentMethodId}
                 </Text>
               </div>
               <div className="flex flex-col w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                  Payment details
+                  {isTr ? "Ödeme detayları" : "Payment details"}
                 </Text>
                 <div
                   className="flex gap-2 txt-medium text-ui-fg-subtle items-center"
                   data-testid="payment-details-summary"
                 >
                   <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
-                    {paymentInfoMap[selectedPaymentMethod]?.icon || (
-                      <CreditCard />
-                    )}
+                    {paymentInfoMap[
+                      activeSession?.provider_id ||
+                        singlePaymentMethodId ||
+                        selectedPaymentMethod ||
+                        ""
+                    ]?.icon || <CreditCard />}
                   </Container>
-                  <Text>Another step will appear</Text>
+                  <Text>
+                    {isTr
+                      ? "Sonraki aşamada tamamlanacak"
+                      : "Another step will appear"}
+                  </Text>
                 </div>
               </div>
             </div>
